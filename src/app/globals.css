@@ -31,3 +31,60 @@ body {
     text-wrap: balance;
   }
 }
+
+
+:root {
+  --dark1: #161618;  
+  --dark2: #1C1C1E;
+  --dark3: #353539;  
+  --text-color: #A4A3A9; 
+  --light-text-color: #E7E5EF;
+  --blue: #585FFF;
+  --purple: #B658FF;
+  --green: #36D776;
+  --red: #FF6258;
+
+}
+
+
+/* Button Styles */
+.button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.button-primary {
+  background-color: var(--primary-color);
+  color: var(--light-text-color);
+}
+
+.button-secondary {
+  background-color: var(--secondary-color);
+  color: var(--light-text-color);
+}
+
+.button-accent {
+  background-color: var(--accent-color);
+  color: var(--light-text-color);
+}
+
+.button-primary:hover,
+.button-secondary:hover,
+.button-accent:hover {
+  background-color: darken(var(--primary-color), 10%);
+}
+
+.button-primary:active,
+.button-secondary:active,
+.button-accent:active {
+  background-color: lighten(var(--primary-color), 10%);
+}
+
+.button:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
+}
