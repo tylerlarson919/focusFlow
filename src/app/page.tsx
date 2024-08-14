@@ -5,10 +5,12 @@ import LeftTop from './components/dashboard-left-top';
 import LeftBottom from './components/dashboard-left-bottom';
 import RightTop from './components/dashboard-right-top';
 import RightBottom from './components/dashboard-right-bottom';
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, useDisclosure, Input } from "@nextui-org/react";
-import { FaCalendar, FaClock, FaEdit  } from "react-icons/fa";
-import { doc, updateDoc } from 'firebase/firestore';
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, useDisclosure, Input, select, Textarea } from "@nextui-org/react";
+import { FaCalendar, FaClock, FaEdit, FaRegStickyNote, FaTrash } from "react-icons/fa";
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
+import { db } from '../../firebase.js';
+
 
 
 // Define the type for session logs
@@ -19,6 +21,7 @@ interface Session {
   type: string;
   length: string;
   name?: string;
+  description?: string; 
 }
 
 
@@ -35,24 +38,7 @@ const Page: React.FC = () => {
     onOpen();  // Open the modal when a session is selected
   };
 
-
-  const handleSave = async () => {
-    if (selectedSession) {
-      try {
-        const firestore = getFirestore();
-        const sessionRef = doc(firestore, 'sessions', selectedSession.id);
-        await updateDoc(sessionRef, {
-          name: selectedSession.name,
-        });
-      } catch (error) {
-        console.error('Error updating document:', error);
-      }
-    }
-  };
   
-
-
-
   
 
   return (
@@ -69,12 +55,46 @@ const Page: React.FC = () => {
         />
       </div>
 
-      {/* Modal for displaying session details */}
       <Modal size="4xl" isOpen={isOpen} onOpenChange={onOpenChange}>
-        <ModalContent>
-          {(onClose) => (
+      <ModalContent>
+        {(onClose) => {
+          const handleSave = async () => {
+            if (selectedSession) {
+              try {
+                const firestore = getFirestore();
+                const sessionRef = doc(db, 'sessions', selectedSession.id);
+                await updateDoc(sessionRef, {
+                  name: selectedSession.name || '',
+                  description: selectedSession.description || '',
+                });
+                onClose();  // Close the modal after saving
+                console.log('Session updated successfully with data: ' + selectedSession.name + selectedSession.description);
+              } catch (error) {
+                console.error('Error updating session:', error);
+              }
+            }
+          };
+          return (
             <>
-              <ModalHeader className="flex flex-col gap-1">Session Details</ModalHeader>
+              <ModalHeader className="items-center flex flex-row gap-3 text-3xl">
+              <FaTrash
+                className="text-2xl text-red-500 cursor-pointer"
+                onClick={async () => {
+                  if (selectedSession) {
+                    try {
+                      const firestore = getFirestore();
+                      const sessionRef = doc(db, 'sessions', selectedSession.id);
+                      await deleteDoc(sessionRef);  // Function to delete the document
+                      onClose();  // Close the modal after deleting
+                      console.log('Session deleted successfully');
+                    } catch (error) {
+                      console.error('Error deleting session:', error);
+                    }
+                  }
+                }}
+              /> 
+                <span>Session Details</span>
+                </ModalHeader>
               <ModalBody>
                 {selectedSession ? (
                   <div>
@@ -84,11 +104,26 @@ const Page: React.FC = () => {
                       size="md" 
                       type="name" 
                       label="Name" 
-                      defaultValue={selectedSession.name}
+                      onValueChange={(value) => setSelectedSession({ ...selectedSession, name: value })}
+                      defaultValue={selectedSession?.name || ''}
                       placeholder="Enter Name"
                       labelPlacement="outside"
                       startContent={
                         <FaEdit className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
+                      }
+                      />
+                    <Textarea
+                      className={styles.paddingBottom}
+                      radius="md" 
+                      size="md" 
+                      type="description" 
+                      label="Description" 
+                      onValueChange={(value) => setSelectedSession({ ...selectedSession, description: value })}
+                      defaultValue={selectedSession?.description || ''}
+                      placeholder="Enter Description"
+                      labelPlacement="outside"
+                      startContent={
+                        <FaRegStickyNote className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
                       }
                       />
                     <Input 
@@ -131,7 +166,6 @@ const Page: React.FC = () => {
                       }
                       />
                     <p><strong>Type:</strong> {selectedSession.type}</p>
-                    {selectedSession.name && <p><strong>Name:</strong> {selectedSession.name}</p>}
                   </div>
                 ) : (
                   <p>No session selected</p>
@@ -146,8 +180,9 @@ const Page: React.FC = () => {
                 </Button>
               </ModalFooter>
             </>
-          )}
-        </ModalContent>
+          );
+        }}
+      </ModalContent>
       </Modal>
     </div>
   );

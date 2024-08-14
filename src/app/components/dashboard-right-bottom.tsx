@@ -25,11 +25,15 @@ interface Session {
   type: string;
   length: string;     // Change to string for formatted length
   name?: string;      // Add name field
+  description?: string; 
+
 }
 
 // Convert Firestore Timestamp to ISO string
-const formatTimestamp = (timestamp: Timestamp, excludeYear = false) => {
-  const date = timestamp.toDate();
+const formatTimestamp = (timestamp: Timestamp | Date | undefined, excludeYear = false) => {
+  if (!timestamp) return ''; // Return empty string if timestamp is undefined
+
+  const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
   const options: Intl.DateTimeFormatOptions = {
     month: 'numeric',
     day: 'numeric',
@@ -43,14 +47,21 @@ const formatTimestamp = (timestamp: Timestamp, excludeYear = false) => {
 
 
 
-const formatLength = (length: number) => {
-  if (length < 60) {
-    return `${length}s`; // Format seconds
+
+
+
+
+const formatLength = (startDate: Date, endDate: Date | null) => {
+  const end = endDate || new Date(); // Use current date if endDate is null
+  const durationInSeconds = Math.floor((end.getTime() - startDate.getTime()) / 1000);
+  if (durationInSeconds < 60) {
+    return `${durationInSeconds}s`; // Format seconds
   }
-  const hours = Math.floor(length / 60);
-  const minutes = length % 60;
+  const hours = Math.floor(durationInSeconds / 3600);
+  const minutes = Math.floor((durationInSeconds % 3600) / 60);
   return `${hours > 0 ? `${hours}h ` : ''}${minutes}m`;
 };
+
 
 
 interface LeftSideProps {
@@ -76,59 +87,66 @@ const LeftSide: React.FC<LeftSideProps> = ({ onModalOpenChange, onSessionSelect 
   };
   
 
-
-
   useEffect(() => {
+    const now = new Date(); // Current time for length calculation
+  
     const fetchSessions = async () => {
       try {
         const sessionsData = await getSessions();
         if (sessionsData) {
           const sortedSessions: Session[] = sessionsData
-          .map(session => ({
-            ...session,
-            startDate: formatTimestamp(session.startDate),  // Format Timestamp to string
-            endDate: formatTimestamp(session.endDate, true), // Format Timestamp with the year excluded
-            length: formatLength(session.length),            // Format length
-          }))
-          .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime()); // Sort by string dates
-        
+            .map(session => {
+              // Ensure correct type handling
+              const startDate = session.startDate instanceof Timestamp ? session.startDate.toDate() : new Date(session.startDate);
+              const endDate = session.endDate ? (session.endDate instanceof Timestamp ? session.endDate.toDate() : new Date(session.endDate)) : null;
+              
+              return {
+                ...session,
+                startDate: formatTimestamp(startDate),
+                endDate: endDate ? formatTimestamp(endDate, true) : '',                
+                length: formatLength(startDate, endDate),
+              };
+            })
+            .sort((a, b) => new Date(b.endDate || now).getTime() - new Date(a.endDate || now).getTime());
+          
           setSessions(sortedSessions);
         }
       } catch (error) {
         console.error("Error fetching sessions:", error);
       }
     };
-    
-    
-    
-
+  
     fetchSessions();
-
-    // Set up real-time listener for new sessions
+  
     const unsubscribe = onSnapshot(collection(getFirestore(), "sessions"), (snapshot) => {
       const sessionsData = snapshot.docs.map(doc => {
         const data = doc.data();
+        const startDate = data.startDate instanceof Timestamp ? data.startDate.toDate() : new Date(data.startDate);
+        const endDate = data.endDate ? (data.endDate instanceof Timestamp ? data.endDate.toDate() : new Date(data.endDate)) : null;
+  
         return {
           id: doc.id,
-          startDate: formatTimestamp(data.startDate as Timestamp),  // Format Timestamp to string
-          endDate: formatTimestamp(data.endDate as Timestamp),      // Format Timestamp to string
+          startDate: formatTimestamp(startDate),
+          endDate: endDate ? formatTimestamp(endDate, true) : '',
           type: data.type,
-          length: formatLength(data.length),                        // Format length
-          name: data.name || '',                                   // Add empty name
+          length: formatLength(startDate, endDate),
+          name: data.name || '',
+          description: data.description || '',
         } as Session;
       });
+  
       if (sessionsData) {
         const sortedSessions: Session[] = sessionsData
-          .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime()); // Sort by string dates
+          .sort((a, b) => new Date(b.endDate || now).getTime() - new Date(a.endDate || now).getTime());
         setSessions(sortedSessions);
       }
     });
-    
-    
-    
-
+  
     return () => unsubscribe(); // Cleanup listener on component unmount
   }, []);
+  
+  
+  
 
   const columns = [
     { key: "date", label: "Date" },
@@ -145,12 +163,16 @@ const LeftSide: React.FC<LeftSideProps> = ({ onModalOpenChange, onSessionSelect 
               <TableColumn key={column.key}>{column.label}</TableColumn>
             )}
           </TableHeader>
-          <TableBody items={sessions}>
+          <TableBody items={sessions} emptyContent="No rows to display.">
             {(item) => (
               <TableRow key={item.id}>
-                <TableCell>{`${item.startDate} - ${item.endDate.split(', ')[1]}`}</TableCell>
+                <TableCell>
+                  {item.endDate ? `${item.startDate} - ${item.endDate.split(', ')[1]}` : `${item.startDate} -`}
+                </TableCell>
                 <TableCell>{item.length}</TableCell>
-                <TableCell>{item.name || ''}</TableCell>
+                <TableCell>
+                  {item.name && item.name.length > 60 ? `${item.name.slice(0, 60)}...` : item.name || ''}
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
