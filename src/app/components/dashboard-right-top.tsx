@@ -5,16 +5,20 @@ import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@
 import Image from 'next/image';
 import { usePathname } from "next/navigation";
 import styles from './dashboard-right-top.module.css';
-import { LogSession, getSessions } from "../../../firebase";
+import { LogSession, getSessions, db } from "../../../firebase";
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 
 // Helper function to format time as MM:SS
+// Helper function to format time as HH:MM:SS
 const formatTime = (time: number) => {
   const hours = Math.floor(time / 3600);
   const minutes = Math.floor((time % 3600) / 60).toString().padStart(2, '0');
   const seconds = (time % 60).toString().padStart(2, '0');
 
-  return hours === 0 ? `${minutes}:${seconds}` : `${hours}:${minutes}:${seconds}`;
+  return hours > 0 ? `${hours}:${minutes}:${seconds}` : `${minutes}:${seconds}`;
 };
+
 
 const RightSide: React.FC = () => {
   // Stopwatch state
@@ -65,15 +69,16 @@ const RightSide: React.FC = () => {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-
+  
     if (isRunning && !isPaused) {
       interval = setInterval(() => {
         setTime(prevTime => prevTime + 1);
       }, 1000);
     }
-
+  
     return () => clearInterval(interval);
   }, [isRunning, isPaused]);
+  
 
   useEffect(() => {
     let timerInterval: NodeJS.Timeout;
@@ -83,18 +88,8 @@ const RightSide: React.FC = () => {
         setTimerTime(prevTime => {
           if (prevTime <= 1) {
             playSound();
+            handleEnd();
             clearInterval(timerInterval); // Clear the interval immediately
-  
-            if (!hasLoggedSessionRef.current) {
-              LogSession({
-                startDate: new Date(Date.now() - timerDuration * 60 * 1000),
-                endDate: new Date(),
-                type: "timer",
-                length: timerDuration,
-              });
-              hasLoggedSessionRef.current = true; // Set the ref to prevent multiple logging
-            }
-  
             setIsTimerRunning(false);
             return 0;
           }
@@ -108,11 +103,32 @@ const RightSide: React.FC = () => {
   
   
 
-  const handleStart = () => {
+  const handleStart = async () => {
+    const start = new Date(); 
     setIsRunning(true);
     setIsPaused(false);
-    setStartTime(new Date()); // Set start time
+    setStartTime(start); // Set start time
+  
+    try {
+      const sessionId = await LogSession({
+        startDate: start,
+        endDate: '',
+        type: 'stopwatch',
+        length: '',
+      });
+  
+      // Ensure sessionId is a string before storing
+      if (typeof sessionId === 'string') {
+        localStorage.setItem('currentSessionId', sessionId);
+      } else {
+        console.error('Error: sessionId is not a string');
+      }
+    } catch (error) {
+      console.error('Error logging new session:', error);
+    }
   };
+  
+  
 
   const handlePause = () => {
     setIsPaused(true);
@@ -122,30 +138,106 @@ const RightSide: React.FC = () => {
     setIsPaused(false);
   };
 
-  const handleEnd = () => {
-    setIsRunning(false);
+
+
+  const formatStopwatchLength = (durationInSeconds: number) => {
+    if (durationInSeconds < 60) {
+      return `${durationInSeconds}s`; // Format seconds
+    }
+  
+    const hours = Math.floor(durationInSeconds / 3600);
+    const minutes = Math.floor((durationInSeconds % 3600) / 60);
+  
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+  
+    return `${minutes}m`;
+  };
+
+  
+
+  const handleEnd = async () => {
+    setIsTimerRunning(false);
     setIsPaused(false);
-    setTime(0);
+    setTimerTime(0);
     const end = new Date();
     setEndTime(end);
   
-    LogSession({
-      startDate: startTime,
-      endDate: end,
-      type: 'stopwatch',
-      length: time,
-    });
+    const durationInSeconds = Math.floor((end.getTime() - (startTime?.getTime() || 0)) / 1000);
+  
+    // Retrieve session ID from localStorage
+    const sessionId = localStorage.getItem('currentSessionId');
+    if (sessionId) {
+      try {
+        const firestore = getFirestore();
+        const sessionRef = doc(firestore, 'sessions', sessionId);
+  
+        // Update the existing session
+        await updateDoc(sessionRef, {
+          endDate: end,
+          length: formatStopwatchLength(durationInSeconds), // Use the correct format
+        });
+  
+        console.log('Session updated successfully with data: ' + end + ' ' + durationInSeconds);
+      } catch (error) {
+        console.error('Error updating session:', error);
+      }
+    } else {
+      console.error('No session ID found. Cannot update session.');
+    }
+  
+    // Reset states to show the dropdown menu again
+    setIsTimerSelected(false);
+    setIsTimerEnded(true);
+    setStartTime(null);
+    setTimerTime(0);
+    setTime(0);
+    setIsRunning(false);
+    setIsPaused(false);
+  
+    // Clear the session ID from localStorage after updating
+    localStorage.removeItem('currentSessionId');
   };
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
-  const handleTimerSelect = (duration: number) => {
+  const handleTimerSelect = async (duration: number) => {
     setTimerDuration(duration);
     setTimerTime(duration * 60);
     setIsTimerRunning(true);
     setIsTimerSelected(true);
     setIsTimerEnded(false);
     setStartTime(new Date());
+  
+    // Create a new session and store the session ID
+    try {
+      const sessionId = await LogSession({
+        startDate: new Date(),
+        endDate: '',
+        type: 'timer',
+        length: duration,
+      });
+  
+      // Ensure sessionId is a string before storing
+      if (sessionId && typeof sessionId === 'string') {
+        localStorage.setItem('currentSessionId', sessionId);
+      } else {
+        console.error('Error: sessionId is not a string or is undefined');
+      }
+    } catch (error) {
+      console.error('Error logging new session:', error);
+    }
   };
-
+  
+  
   const getButtonProps = () => {
     if (!isRunning) {
       return { text: 'Start', onClick: handleStart };

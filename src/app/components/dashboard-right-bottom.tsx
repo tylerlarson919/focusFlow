@@ -52,16 +52,31 @@ const formatTimestamp = (timestamp: Timestamp | Date | undefined, excludeYear = 
 
 
 
+
 const formatLength = (startDate: Date, endDate: Date | null) => {
   const end = endDate || new Date(); // Use current date if endDate is null
   const durationInSeconds = Math.floor((end.getTime() - startDate.getTime()) / 1000);
+
   if (durationInSeconds < 60) {
     return `${durationInSeconds}s`; // Format seconds
   }
+
   const hours = Math.floor(durationInSeconds / 3600);
   const minutes = Math.floor((durationInSeconds % 3600) / 60);
-  return `${hours > 0 ? `${hours}h ` : ''}${minutes}m`;
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h`;
+  }
+
+  return `${minutes}m`;
 };
+
+
+
 
 
 
@@ -90,63 +105,91 @@ const LeftSide: React.FC<LeftSideProps> = ({ onModalOpenChange, onSessionSelect 
   };
   
 
-  useEffect(() => {
-    const now = new Date(); // Current time for length calculation
-  
-    const fetchSessions = async () => {
-      try {
-        const sessionsData = await getSessions();
-        if (sessionsData) {
-          const sortedSessions: Session[] = sessionsData
-            .map(session => {
-              // Ensure correct type handling
-              const startDate = session.startDate instanceof Timestamp ? session.startDate.toDate() : new Date(session.startDate);
-              const endDate = session.endDate ? (session.endDate instanceof Timestamp ? session.endDate.toDate() : new Date(session.endDate)) : null;
-              
-              return {
-                ...session,
-                startDate: formatTimestamp(startDate),
-                endDate: endDate ? formatTimestamp(endDate, true) : '',                
-                length: formatLength(startDate, endDate),
-              };
-            })
-            .sort((a, b) => new Date(b.endDate || now).getTime() - new Date(a.endDate || now).getTime());
-          
-          setSessions(sortedSessions);
-        }
-      } catch (error) {
-        console.error("Error fetching sessions:", error);
-      }
-    };
-  
-    fetchSessions();
-  
-    const unsubscribe = onSnapshot(collection(getFirestore(), "sessions"), (snapshot) => {
-      const sessionsData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        const startDate = data.startDate instanceof Timestamp ? data.startDate.toDate() : new Date(data.startDate);
-        const endDate = data.endDate ? (data.endDate instanceof Timestamp ? data.endDate.toDate() : new Date(data.endDate)) : null;
-  
-        return {
-          id: doc.id,
-          startDate: formatTimestamp(startDate),
-          endDate: endDate ? formatTimestamp(endDate, true) : '',
-          type: data.type,
-          length: formatLength(startDate, endDate),
-          name: data.name || '',
-          description: data.description || '',
-        } as Session;
-      });
-  
+// Function to format length
+const formatLength = (startDate: Date, endDate: Date | null) => {
+  const end = endDate || new Date(); // Use current date if endDate is null
+  const durationInSeconds = Math.floor((end.getTime() - startDate.getTime()) / 1000);
+
+  if (durationInSeconds < 60) {
+    return `${durationInSeconds}s`; // Format seconds
+  }
+
+  const hours = Math.floor(durationInSeconds / 3600);
+  const minutes = Math.floor((durationInSeconds % 3600) / 60);
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  return `${minutes}m`;
+};
+
+// Update `useEffect` hook
+useEffect(() => {
+  const now = new Date(); // Current time for length calculation
+
+  const fetchSessions = async () => {
+    try {
+      const sessionsData = await getSessions();
       if (sessionsData) {
         const sortedSessions: Session[] = sessionsData
+          .map(session => {
+            // Ensure correct type handling
+            const startDate = session.startDate instanceof Timestamp ? session.startDate.toDate() : new Date(session.startDate);
+            const endDate = session.endDate ? (session.endDate instanceof Timestamp ? session.endDate.toDate() : new Date(session.endDate)) : null;
+            
+            // Use `length` if endDate is present; otherwise use `formatLength`
+            const length = endDate ? session.length : formatLength(startDate, endDate);
+            
+            return {
+              ...session,
+              startDate: formatTimestamp(startDate),
+              endDate: endDate ? formatTimestamp(endDate, true) : '',
+              length,
+            };
+          })
           .sort((a, b) => new Date(b.endDate || now).getTime() - new Date(a.endDate || now).getTime());
+        
         setSessions(sortedSessions);
       }
+    } catch (error) {
+      console.error("Error fetching sessions:", error);
+    }
+  };
+
+  fetchSessions();
+
+  const unsubscribe = onSnapshot(collection(getFirestore(), "sessions"), (snapshot) => {
+    const sessionsData = snapshot.docs.map(doc => {
+      const data = doc.data();
+      const startDate = data.startDate instanceof Timestamp ? data.startDate.toDate() : new Date(data.startDate);
+      const endDate = data.endDate ? (data.endDate instanceof Timestamp ? data.endDate.toDate() : new Date(data.endDate)) : null;
+
+      // Use `length` if endDate is present; otherwise use `formatLength`
+      const length = endDate ? data.length : formatLength(startDate, endDate);
+
+      return {
+        id: doc.id,
+        startDate: formatTimestamp(startDate),
+        endDate: endDate ? formatTimestamp(endDate, true) : '',
+        type: data.type,
+        length,
+        name: data.name || '',
+        description: data.description || '',
+      } as Session;
     });
+
+    if (sessionsData) {
+      const sortedSessions: Session[] = sessionsData
+        .sort((a, b) => new Date(b.endDate || now).getTime() - new Date(a.endDate || now).getTime());
+      setSessions(sortedSessions);
+    }
+  });
+
+  return () => unsubscribe(); // Cleanup listener on component unmount
+}, []);
+
   
-    return () => unsubscribe(); // Cleanup listener on component unmount
-  }, []);
   
   
   

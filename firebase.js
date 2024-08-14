@@ -31,6 +31,7 @@ export const LogSession = async (session) => {
       // Remove userId, as we're not associating sessions with a specific user
     });
     console.log("Document written with ID: ", docRef.id);
+    return docRef.id; // Return the session ID
   } catch (e) {
     console.error("Error adding document: ", e);
   }
