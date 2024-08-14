@@ -175,7 +175,7 @@ const Page: React.FC = () => {
                 <Button color="danger" variant="light" onPress={onClose}>
                   Close
                 </Button>
-                <Button color="primary" onPress={handleSave}>
+                <Button color="secondary" onPress={handleSave}>
                   Save
                 </Button>
               </ModalFooter>
@@ -194,13 +194,13 @@ export default Page;
 
 
 
-// 1. First, add a next UI table element in the bottom frame
-// 2. add logic To the table so that it shows a max of like 10 rows with the load more button. There should also be a hover effect and the name field should be editable 
-// 3.  On the left side of the page, the top part should be another table for my schedule,Schedule properties include:
+// 2.  On the left side of the page, the top part should be another table for my schedule, Schedule properties include:
     // - Date (date and time)
     // - name
     // - Description
     // - Importance
+    // You should also be able to switch between days, seeing previous days and future days, there should also be a add task button that will add a task for the selected day
+// 3. There should be a button on the left top to go to the schedule page, the schedule page will be a page where you can schedule for any day and see weekly or monthly overviews and how you're doing keeping up with the tasks, based off of the sessions logged
 // 4. On the bottom part of the left side of the page, should be a calendar widget. Just a super simple calendar widget with marks on the dates that time was logged for, when you click on a date it will open a pop up with a table containing all the logs from that date and the total time logged, and maybe some other stats too.
 
 // Features for later:

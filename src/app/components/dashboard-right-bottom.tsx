@@ -9,6 +9,7 @@ import {
   TableRow,
   TableCell,
   getKeyValue,
+  Pagination,
 } from "@nextui-org/react";
 import { LogSession, getSessions } from "../../../firebase";
 import { onSnapshot, collection, Timestamp } from "firebase/firestore";
@@ -70,6 +71,8 @@ interface LeftSideProps {
 }
 
 const LeftSide: React.FC<LeftSideProps> = ({ onModalOpenChange, onSessionSelect }) => {
+
+
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -154,6 +157,23 @@ const LeftSide: React.FC<LeftSideProps> = ({ onModalOpenChange, onSessionSelect 
     { key: "name", label: "Name" },
   ];
 
+  const rowsPerPage = 10;
+
+  const [page, setPage] = React.useState(1);
+
+  // Calculate the total number of pages
+  const pages = Math.ceil(sessions.length / rowsPerPage);
+
+  // Slice the sessions for the current page
+  const paginatedSessions = React.useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    return sessions.slice(start, end);
+  }, [page, sessions]);
+
+
+
+
   return (
     <div className={styles.leftTopFrame}>
       <div className={styles.tableContainer}>
@@ -163,7 +183,7 @@ const LeftSide: React.FC<LeftSideProps> = ({ onModalOpenChange, onSessionSelect 
               <TableColumn key={column.key}>{column.label}</TableColumn>
             )}
           </TableHeader>
-          <TableBody items={sessions} emptyContent="No rows to display.">
+          <TableBody items={paginatedSessions} emptyContent="No rows to display.">
             {(item) => (
               <TableRow key={item.id}>
                 <TableCell>
@@ -176,8 +196,18 @@ const LeftSide: React.FC<LeftSideProps> = ({ onModalOpenChange, onSessionSelect 
               </TableRow>
             )}
           </TableBody>
-
         </Table>
+        <div className="flex w-full justify-center absolute bottom-5 right-1">
+          <Pagination
+            isCompact
+            showControls
+            showShadow
+            color="secondary"
+            page={page}
+            total={pages}
+            onChange={(page) => setPage(page)}
+          />
+        </div>
       </div>
     </div>
   );
