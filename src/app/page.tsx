@@ -1,253 +1,174 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import styles from './page.module.css';
-import { Tabs, Tab } from '@nextui-org/tabs';
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from '@nextui-org/react';
-import Image from 'next/image';
-import { usePathname } from "next/navigation";
+import LeftTop from './components/dashboard-left-top';
+import LeftBottom from './components/dashboard-left-bottom';
+import RightTop from './components/dashboard-right-top';
+import RightBottom from './components/dashboard-right-bottom';
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, useDisclosure, Input } from "@nextui-org/react";
+import { FaCalendar, FaClock, FaEdit  } from "react-icons/fa";
+import { doc, updateDoc } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
+
+
+// Define the type for session logs
+interface Session {
+  id: string;
+  startDate: string;
+  endDate: string;
+  type: string;
+  length: string;
+  name?: string;
+}
 
 
 
 
-const App: React.FC = () => {
-  // Stopwatch state
-  const [isRunning, setIsRunning] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [time, setTime] = useState(0);
 
-  // Timer state
-  const [timerDuration, setTimerDuration] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [timerTime, setTimerTime] = useState(0);
+const Page: React.FC = () => {
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
 
-  const [isTimerSelected, setIsTimerSelected] = useState(false);
-  const [isTimerEnded, setIsTimerEnded] = useState(false);
-  const audioRef = React.useRef<HTMLAudioElement>(null);
-
-
-  const playSound = () => {
-    if (audioRef.current) {
-      audioRef.current.play();
-    }
+  // Handle session selection
+  const handleSessionSelect = (session: Session | null) => {
+    setSelectedSession(session);
+    onOpen();  // Open the modal when a session is selected
   };
 
-  const stopAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0; // Optionally reset playback position
-    }
-  };
 
-  React.useEffect(() => {
-    // Add event listener for clicks
-    const handleClick = () => {
-      stopAudio();
-    };
-  
-    document.addEventListener('click', handleClick);
-  
-    // Cleanup the event listener on component unmount
-    return () => {
-      document.removeEventListener('click', handleClick);
-    };
-  }, []);
-
-  
-
-  // Tabs state
-  const [tabsSelected, setTabsSelected] = useState<string>('timer'); // Default to 'timer'
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (isRunning && !isPaused) {
-      interval = setInterval(() => {
-        setTime(prevTime => prevTime + 1);
-      }, 1000);
-    }
-
-    return () => clearInterval(interval);
-  }, [isRunning, isPaused]);
-
-  useEffect(() => {
-    let timerInterval: NodeJS.Timeout;
-  
-    if (isTimerRunning) {
-      timerInterval = setInterval(() => {
-        setTimerTime(prevTime => {
-          if (prevTime <= 1) {
-            playSound();
-            setIsTimerRunning(false);
-            setIsTimerEnded(true);
-            return 0;
-          }
-          return prevTime - 1;
+  const handleSave = async () => {
+    if (selectedSession) {
+      try {
+        const firestore = getFirestore();
+        const sessionRef = doc(firestore, 'sessions', selectedSession.id);
+        await updateDoc(sessionRef, {
+          name: selectedSession.name,
         });
-      }, 1000);
-    }
-  
-    return () => clearInterval(timerInterval);
-  }, [isTimerRunning]);
-  
-
-  const handleStart = () => {
-    setIsRunning(true);
-    setIsPaused(false);
-  };
-
-  const handlePause = () => {
-    setIsPaused(true);
-  };
-
-  const handleResume = () => {
-    setIsPaused(false);
-  };
-
-  const handleEnd = () => {
-    setIsRunning(false);
-    setIsPaused(false);
-    setTime(0);
-  };
-
-const handleTimerSelect = (duration: number) => {
-  setTimerDuration(duration);
-  setTimerTime(duration * 60); // Duration is already in minutes; convert to seconds
-  setIsTimerRunning(true);
-  setIsTimerSelected(true);
-  setIsTimerEnded(false); // Ensure timer end state is reset
-};
-
-
-  const getButtonProps = () => {
-    if (!isRunning) {
-      return { text: 'Start', onClick: handleStart };
-    } else if (isPaused) {
-      return { text: 'Resume', onClick: handleResume };
-    } else {
-      return { text: 'Pause', onClick: handlePause };
+      } catch (error) {
+        console.error('Error updating document:', error);
+      }
     }
   };
+  
 
-  const pathname = usePathname();
 
-  const handleTabChange = (key: string | number) => {
-    setTabsSelected(key.toString()); // Ensure key is converted to string
-  };
+
   
 
   return (
-    <div className={styles.container}>      
+    <div className={styles.container}>
       <div className={styles.leftFrame}>
-        <div className={styles.leftTopFrame}></div>
-        <div className={styles.leftBottomFrame}></div>
+        <LeftTop />
+        <LeftBottom />
       </div>
-  
       <div className={styles.rightFrame}>
-        <div className={styles.rightTopFrame}>
-          <div className={styles.topContent}>
-            <div className={styles.infoLeft}>
-              {tabsSelected === 'stopwatch' ? (
-                <>
-                  <h3>{formatTime(time)}</h3>
-                  <div className={styles.buttons}>
-                    {isRunning && !isPaused ? (
-                      <>
-                        <Button 
-                          color="secondary" 
-                          variant="bordered" 
-                          className="width-100" 
-                          onClick={handlePause}
-                        >
-                          Pause
-                        </Button>
-                        <Button 
-                          color="secondary" 
-                          variant="bordered" 
-                          className="width-100" 
-                          onClick={handleEnd}
-                        >
-                          End
-                        </Button>
-                      </>
-                    ) : (
-                      <Button 
-                        color="secondary" 
-                        variant="bordered" 
-                        className="width-100" 
-                        onClick={handleStart}
-                      >
-                        {isPaused ? 'Resume' : 'Start'}
-                      </Button>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h3>{formatTime(timerTime)}</h3>
-                  <div className={styles.buttons}>
-                    {isTimerSelected && !isTimerEnded ? (
-                      <Button
-                        color="secondary"
-                        variant="bordered"
-                        className="width-100"
-                        onClick={() => setIsTimerRunning(prev => !prev)}
-                      >
-                        {isTimerRunning ? 'Pause' : 'Resume'}
-                      </Button>
-                    ) : (
-                      <Dropdown>
-                        <DropdownTrigger>
-                          <Button color="secondary" variant="bordered" className="width-100">
-                            Select Timer
-                          </Button>
-                        </DropdownTrigger>
-                        <DropdownMenu aria-label="Timer Options">
-                          {[0.1, 5, 10, 15, 30, 45, 60, 120, 240].map(minutes => (
-                            <DropdownItem key={minutes} onClick={() => handleTimerSelect(minutes)}>
-                              {minutes >= 60 ? `${minutes / 60}h` : `${minutes}m`}
-                            </DropdownItem>
-                          ))}
-                        </DropdownMenu>
-                      </Dropdown>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-            <div className={styles.picRight}>
-              <Image className={styles.currentPlant} alt="" src="/plant-placeholder.png" width={200} height={200} />
-            </div>
-          </div>
-          <div className={styles.bottomTabs}>
-            <Tabs
-              aria-label="Tabs"
-              selectedKey={tabsSelected}
-              onSelectionChange={handleTabChange}
-            >
-              <Tab key="timer" title="Timer"/>
-              <Tab key="stopwatch" title="Stopwatch"/>
-            </Tabs>
-          </div>
-        </div>
-        <div className={styles.rightBottomFrame}></div>
+        <RightTop />
+        <RightBottom 
+          onModalOpenChange={onOpenChange} 
+          onSessionSelect={handleSessionSelect} 
+        />
       </div>
-      <audio ref={audioRef} src="/alarm.mp3" />
+
+      {/* Modal for displaying session details */}
+      <Modal size="4xl" isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">Session Details</ModalHeader>
+              <ModalBody>
+                {selectedSession ? (
+                  <div>
+                    <Input
+                      className={styles.paddingBottom}
+                      radius="md" 
+                      size="md" 
+                      type="name" 
+                      label="Name" 
+                      defaultValue={selectedSession.name}
+                      placeholder="Enter Name"
+                      labelPlacement="outside"
+                      startContent={
+                        <FaEdit className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
+                      }
+                      />
+                    <Input 
+                      className={styles.paddingBottom}
+                      radius="md" 
+                      isReadOnly 
+                      size="md" 
+                      type="startDate" 
+                      label="Start Date" 
+                      defaultValue={selectedSession.startDate}
+                      labelPlacement="outside"
+                      startContent={
+                        <FaCalendar className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
+                      }
+                      />
+                    <Input
+                      className={styles.paddingBottom}
+                      radius="md" 
+                      isReadOnly 
+                      size="md" 
+                      type="endDate" 
+                      label="End Date" 
+                      defaultValue={selectedSession.endDate}
+                      labelPlacement="outside"
+                      startContent={
+                        <FaCalendar className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
+                      }
+                      />
+                    <Input 
+                      className={styles.paddingBottom}
+                      radius="md" 
+                      isReadOnly 
+                      size="md" 
+                      type="length" 
+                      label="Length" 
+                      defaultValue={selectedSession.length}
+                      labelPlacement="outside"
+                      startContent={
+                        <FaClock className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
+                      }
+                      />
+                    <p><strong>Type:</strong> {selectedSession.type}</p>
+                    {selectedSession.name && <p><strong>Name:</strong> {selectedSession.name}</p>}
+                  </div>
+                ) : (
+                  <p>No session selected</p>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Close
+                </Button>
+                <Button color="primary" onPress={handleSave}>
+                  Save
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
-  );  
+  );
 };
 
-// Helper function to format time as MM:SS
-const formatTime = (time: number) => {
-  const hours = Math.floor(time / 3600);
-  const minutes = Math.floor((time % 3600) / 60).toString().padStart(2, '0');
-  const seconds = (time % 60).toString().padStart(2, '0');
-
-  if (hours === 0) {
-    return `${minutes}:${seconds}`;
-  } else {
-    return `${hours}:${minutes}:${seconds}`;
-  }
-};
+export default Page;
 
 
-export default App;
+
+
+
+// 1. First, add a next UI table element in the bottom frame
+// 2. add logic To the table so that it shows a max of like 10 rows with the load more button. There should also be a hover effect and the name field should be editable 
+// 3.  On the left side of the page, the top part should be another table for my schedule,Schedule properties include:
+    // - Date (date and time)
+    // - name
+    // - Description
+    // - Importance
+// 4. On the bottom part of the left side of the page, should be a calendar widget. Just a super simple calendar widget with marks on the dates that time was logged for, when you click on a date it will open a pop up with a table containing all the logs from that date and the total time logged, and maybe some other stats too.
+
+// Features for later:
+    // - Option to listen to combing sounds as the timer is playing, and also the option to choose which sounds
+    // - Option to choose an alarm, saving the alarm preference to the fire store database for that user
+    // - A stats page containing stats like average time per day, longest session, total hours logged etc.
