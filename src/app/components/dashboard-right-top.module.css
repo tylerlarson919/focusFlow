@@ -7,6 +7,7 @@
     flex-direction:column;
     padding-top: 15px;
     padding-bottom: 15px;
+    position: relative;
 
   }
 
@@ -45,4 +46,23 @@
   .rightTopFrame {
     border-radius: 60px;
     border: 2px solid var(--dark3);
+}
+.currentPlant {
+  width: 200px;
+  height: 200px;
+
+}
+
+
+
+.plantImages {
+  display: flex; /* Enable Flexbox */
+  flex-direction: row; /* Align items horizontally */
+  flex-wrap: wrap; /* Allow items to wrap to the next line if needed */
+  gap: 10px; /* Optional: space between items */
+}
+
+.imageContainer {
+  display: inline-block; /* Ensure containers align horizontally */
+  margin-right: 10px; /* Optional: space between items */
 }
