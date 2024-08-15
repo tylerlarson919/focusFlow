@@ -136,18 +136,23 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
                         fullWidth
                         value={date ? parseDateTime(date) : null}
                         onChange={handleDateChange}
+                        startContent={
+                            <FaCalendar className="text-1xl text-default-400 pointer-events-none flex-shrink-0" />
+                        }
                     />
                     <Input
                         label="Name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         fullWidth
+
                     />
                     <Textarea
                         label="Description"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         fullWidth
+
                     />
                 </ModalBody>
                 <ModalFooter>
