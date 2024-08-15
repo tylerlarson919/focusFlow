@@ -70,10 +70,14 @@ const RightSide: React.FC = () => {
 
   useEffect(() => {
     if (timerDuration > 0) {
-      const stages = Math.ceil(timerDuration / 45); // Calculate stage based on 45 mins
-      setCurrentStage(Math.min(stages, 4)); // Ensure stage doesn't exceed 4
+      const stageDuration = timerDuration * 60 / 4; // Divide timer duration by 4 for stage intervals
+      const elapsed = timerDuration * 60 - timerTime; // Time elapsed in seconds
+  
+      const stage = Math.min(Math.floor(elapsed / stageDuration) + 1, 4);
+      setCurrentStage(stage);
     }
-  }, [timerDuration]);
+  }, [timerTime, timerDuration]);
+  
   
 
 useEffect(() => {
@@ -133,24 +137,25 @@ useEffect(() => {
 
   
   useEffect(() => {
-    let timerId: NodeJS.Timeout | null = null; // Initialize with null
+    if (isRunning && !isPaused && startTime) {
+      const elapsedTime = Math.floor((new Date().getTime() - startTime.getTime()) / 1000); // Elapsed time in seconds
   
-    if (isRunning && !isPaused) {
-      timerId = setInterval(() => {
-        if (startTime) {
-          const elapsedTime = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
-          setTime(elapsedTime);
-          localStorage.setItem('time', elapsedTime.toString());
+      // Define the stages for stopwatch
+      const stageTimes = [0, 900, 1800, 2700]; // 0s, 15m, 30m, 45m in seconds
+  
+      let stage = 1;
+      for (let i = 0; i < stageTimes.length; i++) {
+        if (elapsedTime >= stageTimes[i]) {
+          stage = i + 1;
+        } else {
+          break;
         }
-      }, 1000);
-    } else if (timerId) {
-      clearInterval(timerId); // Check if timerId is not null before clearing
-    }
+      }
   
-    return () => {
-      if (timerId) clearInterval(timerId); // Check if timerId is not null before clearing
-    };
+      setCurrentStage(stage);
+    }
   }, [isRunning, isPaused, startTime]);
+  
   
   
   
@@ -169,6 +174,7 @@ useEffect(() => {
             setIsTimerRunning(false);
             setIsTimerEnded(true);
             playSound(); // Play sound when timer ends
+            handleEnd();
             return 0;
           }
           return prevTime - 1;
@@ -274,7 +280,7 @@ useEffect(() => {
     setIsTimerRunning(false);
     setIsPaused(false);
     setTimerTime(0);
-    const end = new Date(); // Capture the current end time
+    const end = new Date();
     setEndTime(end);
   
     const sessionId = localStorage.getItem('currentSessionId');
@@ -291,9 +297,9 @@ useEffect(() => {
   
         // Update session document with end date and length
         await updateDoc(sessionRef, {
-          endDate: end,           // Log the end date
-          length: length,         // Log the duration
-          plantStage: calculatePlantStage(elapsedTime, timerDuration * 60),
+          endDate: end.toISOString(), // Save end date as ISO string
+          length: length,
+          plantStage: currentStage, // Update the stage here
         });
   
         console.log('Session updated successfully with end date and duration.');
@@ -304,7 +310,7 @@ useEffect(() => {
       console.error('No session ID or start time found. Cannot update session.');
     }
   
-    // Clean up local storage and reset timer state
+    // Clean up local storage and reset state
     localStorage.removeItem('currentSessionId');
     localStorage.removeItem('startTime');
     localStorage.removeItem('time');
@@ -318,6 +324,7 @@ useEffect(() => {
     setIsRunning(false);
     setIsPaused(false);
   };
+  
   
   
   
