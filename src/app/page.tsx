@@ -230,7 +230,7 @@ export default Page;
 
 
 
-
+// 2. Timer is completely fucked and Does not log the end time when the timer ends. Also, the plant growth stages are messed up as well and are not changing. 
 // 3. There should be a button on the left top to go to the schedule page, the schedule page will be a page where you can schedule for any day and see weekly or monthly overviews and how you're doing keeping up with the tasks, based off of the sessions logged
 // 4. On the bottom part of the left side of the page, should be a calendar widget. Just a super simple calendar widget with marks on the dates that time was logged for, when you click on a date it will open a pop up with a table containing all the logs from that date and the total time logged, and maybe some other stats too.
 

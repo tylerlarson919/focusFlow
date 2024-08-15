@@ -451,7 +451,7 @@ useEffect(() => {
         <ModalContent className={styles.modalContent}>
           <ModalHeader className="text-center text-xl font-bold">Choose Plant</ModalHeader>
           <ModalBody className="p-5">
-          <ScrollShadow orientation="horizontal" className="w-full max-h-[400px]">
+          <ScrollShadow orientation="vertical" className="w-full max-h-[400px]">
             <div className={styles.plantImages}>
               {plantsAtStage4.map((plant) => (
                 <div onClick={() => handlePlantClick(plant.id)} key={plant.id} className={styles.imageContainer}>
