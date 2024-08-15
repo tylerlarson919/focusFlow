@@ -18,6 +18,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
 const db = getFirestore(app);
+const tasksCollection = collection(db, "tasks");
+
 
 
 // Firestore Collections and Functions
@@ -52,5 +54,21 @@ export const getSessions = async () => {
 };
 
 
+
+export const getTasks = async () => {
+  try {
+    const querySnapshot = await getDocs(tasksCollection);
+    const tasks = [];
+    querySnapshot.forEach((doc) => {
+      tasks.push({ id: doc.id, ...doc.data() });
+    });
+    return tasks;
+  } catch (e) {
+    console.error("Error getting documents: ", e);
+  }
+};
+
+
+
 // Export the initialized Firebase app, auth, and db
-export { app, db, storage };
+export { app, db, storage, tasksCollection };

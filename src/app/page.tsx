@@ -10,6 +10,7 @@ import { FaCalendar, FaClock, FaEdit, FaRegStickyNote, FaTrash } from "react-ico
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { db } from '../../firebase.js';
+import TaskModal from './components/task-modal';
 
 
 
@@ -27,10 +28,13 @@ interface Session {
 
 
 
-
 const Page: React.FC = () => {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
+
+
 
   // Handle session selection
   const handleSessionSelect = (session: Session | null) => {
@@ -38,13 +42,26 @@ const Page: React.FC = () => {
     onOpen();  // Open the modal when a session is selected
   };
 
+
+  const OpenNewTaskModal = (isClicked: boolean, date: Date) => {
+    if (isClicked) {
+        const localDateString = date.toLocaleDateString('en-US'); // Format to local date string
+        setSelectedDate(localDateString); // Set the formatted date
+        setIsTaskModalOpen(true);
+        console.log('Sending Date: ' + localDateString);
+    }
+};
+
   
   
+
 
   return (
     <div className={styles.container}>
       <div className={styles.leftFrame}>
-        <LeftTop />
+        <LeftTop 
+          onNewTaskClick={OpenNewTaskModal} 
+        />
         <LeftBottom />
       </div>
       <div className={styles.rightFrame}>
@@ -54,6 +71,13 @@ const Page: React.FC = () => {
           onSessionSelect={handleSessionSelect} 
         />
       </div>
+      <TaskModal 
+        isOpen={isTaskModalOpen} 
+        onClose={() => setIsTaskModalOpen(false)}
+        onNewTaskClick={OpenNewTaskModal}  
+        onSave={() => {}}  
+        initialDate={selectedDate}  // Pass the date as a string
+    />
 
       <Modal size="4xl" isOpen={isOpen} onOpenChange={onOpenChange}>
       <ModalContent>
