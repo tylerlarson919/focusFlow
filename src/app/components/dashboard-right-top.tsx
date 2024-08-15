@@ -54,6 +54,28 @@ const RightSide: React.FC = () => {
       audioRef.current.currentTime = 0;
     }
   };
+  useEffect(() => {
+    const savedSessionId = localStorage.getItem('currentSessionId');
+    const savedStartTime = localStorage.getItem('startTime');
+    const savedTime = localStorage.getItem('time');
+    const savedIsPaused = localStorage.getItem('isPaused') === 'true';
+  
+    if (savedSessionId && savedStartTime && savedTime) {
+      setIsRunning(true);
+      setIsPaused(savedIsPaused);
+      setStartTime(new Date(savedStartTime));
+      setTime(parseInt(savedTime, 10));
+      setTabsSelected('stopwatch');  // Default to the Stopwatch tab
+  
+      // Update session if running after a page refresh
+      const now = new Date();
+      const elapsedTime = Math.floor((now.getTime() - (startTime?.getTime() || 0)) / 1000);
+      localStorage.setItem('time', elapsedTime.toString());
+    }
+  }, []);
+  
+  
+  
 
   useEffect(() => {
     const handleClick = () => {
@@ -72,12 +94,17 @@ const RightSide: React.FC = () => {
   
     if (isRunning && !isPaused) {
       interval = setInterval(() => {
-        setTime(prevTime => prevTime + 1);
+        if (startTime) {
+          const now = new Date();
+          const elapsedTime = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+          setTime(elapsedTime);
+          localStorage.setItem('time', elapsedTime.toString());
+        }
       }, 1000);
     }
   
     return () => clearInterval(interval);
-  }, [isRunning, isPaused]);
+  }, [isRunning, isPaused, startTime]);
   
 
   useEffect(() => {
@@ -89,18 +116,20 @@ const RightSide: React.FC = () => {
           if (prevTime <= 1) {
             playSound();
             handleEnd();
-            clearInterval(timerInterval); // Clear the interval immediately
+            clearInterval(timerInterval);
             setIsTimerRunning(false);
             return 0;
           }
-          return prevTime - 1;
+          const now = new Date();
+          const elapsedTime = Math.floor((now.getTime() - startTime!.getTime()) / 1000);
+          const remainingTime = timerDuration * 60 - elapsedTime;
+          return remainingTime > 0 ? remainingTime : 0;
         });
       }, 1000);
     }
   
     return () => clearInterval(timerInterval);
-  }, [isTimerRunning, timerDuration]);
-  
+  }, [isTimerRunning, startTime, timerDuration]);
   
 
   const handleStart = async () => {
@@ -108,6 +137,9 @@ const RightSide: React.FC = () => {
     setIsRunning(true);
     setIsPaused(false);
     setStartTime(start); // Set start time
+    localStorage.setItem('startTime', start.toISOString());
+    localStorage.setItem('time', '0');
+    localStorage.setItem('isPaused', 'false');
   
     try {
       const sessionId = await LogSession({
@@ -132,10 +164,13 @@ const RightSide: React.FC = () => {
 
   const handlePause = () => {
     setIsPaused(true);
+    localStorage.setItem('time', time.toString());
+    localStorage.setItem('isPaused', 'true');
   };
 
   const handleResume = () => {
     setIsPaused(false);
+    localStorage.setItem('isPaused', 'false');
   };
 
 
@@ -164,22 +199,27 @@ const RightSide: React.FC = () => {
     const end = new Date();
     setEndTime(end);
   
-    const durationInSeconds = Math.floor((end.getTime() - (startTime?.getTime() || 0)) / 1000);
-  
-    // Retrieve session ID from localStorage
+    // Retrieve session details from localStorage
     const sessionId = localStorage.getItem('currentSessionId');
-    if (sessionId) {
+    const savedStartTime = localStorage.getItem('startTime');
+    const savedTime = localStorage.getItem('time');
+    
+    if (sessionId && savedStartTime && savedTime) {
       try {
         const firestore = getFirestore();
         const sessionRef = doc(firestore, 'sessions', sessionId);
   
+        const startTime = new Date(savedStartTime);
+        const durationInSeconds = Math.floor((end.getTime() - startTime.getTime()) / 1000);
+        const length = formatStopwatchLength(durationInSeconds);
+  
         // Update the existing session
         await updateDoc(sessionRef, {
           endDate: end,
-          length: formatStopwatchLength(durationInSeconds), // Use the correct format
+          length: length,
         });
   
-        console.log('Session updated successfully with data: ' + end + ' ' + durationInSeconds);
+        console.log('Session updated successfully with end date and duration.');
       } catch (error) {
         console.error('Error updating session:', error);
       }
@@ -187,7 +227,13 @@ const RightSide: React.FC = () => {
       console.error('No session ID found. Cannot update session.');
     }
   
-    // Reset states to show the dropdown menu again
+    // Clear local storage
+    localStorage.removeItem('currentSessionId');
+    localStorage.removeItem('startTime');
+    localStorage.removeItem('time');
+    localStorage.removeItem('isPaused');
+  
+    // Reset states
     setIsTimerSelected(false);
     setIsTimerEnded(true);
     setStartTime(null);
@@ -195,10 +241,10 @@ const RightSide: React.FC = () => {
     setTime(0);
     setIsRunning(false);
     setIsPaused(false);
-  
-    // Clear the session ID from localStorage after updating
-    localStorage.removeItem('currentSessionId');
   };
+  
+  
+  
   
   
   
@@ -250,7 +296,8 @@ const RightSide: React.FC = () => {
 
   const pathname = usePathname();
 
-  const [tabsSelected, setTabsSelected] = useState<string>('timer'); // Default to 'timer'
+  const [tabsSelected, setTabsSelected] = useState<string>('timer');
+
 
   const handleTabChange = (key: string | number) => {
     setTabsSelected(key.toString());

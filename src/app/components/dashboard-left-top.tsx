@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Pagination, Button, ButtonGroup, Table, TableBody, TableHeader, TableColumn, TableRow, TableCell } from '@nextui-org/react';
+import { Calendar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button, ButtonGroup, Table, TableBody, TableHeader, TableColumn, TableRow, TableCell } from '@nextui-org/react';
 import { CalendarDate } from '@internationalized/date'; 
 import styles from './dashboard-left-top.module.css';
 import { getTasks, db } from '../../../firebase';
@@ -22,8 +22,7 @@ const LeftTop: React.FC<LeftTopProps> = ({ onNewTaskClick, onEditTaskClick, task
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
 
-  const [page, setPage] = useState<number>(1);
-  const [tasksPerPage] = useState<number>(10);
+
 
   const [dropdownVisible, setDropdownVisible] = useState<string | null>(null);
   const [currentStatus, setCurrentStatus] = useState<Record<string, string>>({});
@@ -82,11 +81,7 @@ const filteredAndSortedTasks = selectedDate ? (() => {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 })() : [];
 
-// Pagination
-const indexOfLastTask = page * tasksPerPage;
-const indexOfFirstTask = indexOfLastTask - tasksPerPage;
-const paginatedTasks = filteredAndSortedTasks.slice(indexOfFirstTask, indexOfLastTask);
-const totalPages = Math.ceil(filteredAndSortedTasks.length / tasksPerPage);
+
 
 
 const handleRowAction = (key: React.Key) => {
@@ -222,10 +217,10 @@ const handleRowAction = (key: React.Key) => {
             <TableColumn key={column.key}>{column.label}</TableColumn>
           )}
         </TableHeader>
-        <TableBody items={paginatedTasks} emptyContent="No tasks to display.">
+        <TableBody items={filteredAndSortedTasks} emptyContent="No tasks to display.">
           {(item) => (
             <TableRow key={item.id}>
-              <TableCell>{item.name}</TableCell>
+              <TableCell className={styles.nameCell}>{item.name}</TableCell>
               <TableCell>{format(item.date, "h:mm a")}</TableCell>
               <TableCell>
                 <Dropdown
@@ -238,7 +233,13 @@ const handleRowAction = (key: React.Key) => {
                     <Button
                       size="sm"
                       onClick={() => handleDropdownToggle(item.id)}
-                      style={{ color: 'white' }} // Remove dynamic background color for now
+                      className={
+                        item.status === "In Progress"
+                          ? styles.statusInProgress
+                          : item.status === "Completed"
+                          ? styles.statusCompleted
+                          : styles.statusNotStarted
+                      }
                     >
                       {currentStatus[item.id] || item.status}
                     </Button>
@@ -259,8 +260,6 @@ const handleRowAction = (key: React.Key) => {
                   </DropdownMenu>
                 </Dropdown>
               </TableCell>
-
-
               <TableCell>{item.importance}</TableCell>
             </TableRow>
           )}
@@ -268,17 +267,6 @@ const handleRowAction = (key: React.Key) => {
 
       </Table>
 
-      <div className="flex w-full justify-center bottom-4 absolute right-1">
-        <Pagination
-          isCompact
-          showControls
-          showShadow
-          color="secondary"
-          page={page}
-          total={totalPages}
-          onChange={(newPage) => setPage(newPage)}
-        />
-      </div>
     </div>
 
   );

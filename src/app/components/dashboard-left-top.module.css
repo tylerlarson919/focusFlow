@@ -6,8 +6,8 @@
     align-items: center;
     justify-content: flex-start;
     gap: 10px;
-    border-radius: 60px;
     position: relative;
+    overflow: overlay;
 }
 
 
@@ -105,3 +105,24 @@
     background-color: #f5f5f5;
   }
   
+  .nameCell {
+    white-space: nowrap;       /* Prevents text from wrapping */
+    overflow: hidden;          /* Hides text overflow */
+    text-overflow: ellipsis;   /* Adds "..." for overflow */
+    max-width: 250px;          /* Adjust width as needed */
+  }
+
+  .statusNotStarted {
+    background-color: #3f3f46;
+    color: #edfff9;
+  }
+  
+  .statusInProgress {
+    background-color: rgb(100, 32, 100);
+    color: #edfff9;
+  }
+  
+  .statusCompleted {
+    background-color: rgb(63, 110, 63);
+    color: #edfff9;
+  }
