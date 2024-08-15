@@ -33,35 +33,46 @@ const Page: React.FC = () => {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const [tasks, setTasks] = useState<any[]>([]);
 
 
 
   // Handle session selection
   const handleSessionSelect = (session: Session | null) => {
-    setSelectedSession(session);
-    onOpen();  // Open the modal when a session is selected
-  };
-
-
-  const OpenNewTaskModal = (isClicked: boolean, date: Date) => {
-    if (isClicked) {
-        const localDateString = date.toLocaleDateString('en-US'); // Format to local date string
-        setSelectedDate(localDateString); // Set the formatted date
-        setIsTaskModalOpen(true);
-        console.log('Sending Date: ' + localDateString);
-    }
+    setSelectedSession(session); // Set the selected session
+    setSelectedTask(null); // Clear any selected task to avoid conflicts
+    onOpen(); // Open the modal when a session is selected
 };
 
-  
+const OpenNewTaskModal = (isClicked: boolean, date: Date) => {
+  if (isClicked) {
+      const localDateString = date.toLocaleDateString('en-US'); // Format to local date string
+      setSelectedTask(null); // Clear any previously selected task
+      setSelectedDate(localDateString); // Set the formatted date
+      setIsTaskModalOpen(true); // Open the modal
+      console.log('Sending Date: ' + localDateString);
+  }
+};
+const OpenEditTaskModal = (isClicked: boolean, task: any) => {
+  if (isClicked) {
+      setSelectedSession(null); // Clear any selected session to avoid conflicts
+      setSelectedTask(task); // Set the task to be edited
+      setIsTaskModalOpen(true); // Open the modal
+  }
+};
   
 
 
   return (
     <div className={styles.container}>
       <div className={styles.leftFrame}>
-        <LeftTop 
-          onNewTaskClick={OpenNewTaskModal} 
-        />
+      <LeftTop
+        onNewTaskClick={OpenNewTaskModal}
+        onEditTaskClick={OpenEditTaskModal}  // New prop for editing tasks
+        tasks={tasks} // Ensure tasks is provided
+        setTasks={setTasks} // Ensure setTasks is provided
+      />
         <LeftBottom />
       </div>
       <div className={styles.rightFrame}>
@@ -77,7 +88,8 @@ const Page: React.FC = () => {
         onNewTaskClick={OpenNewTaskModal}  
         onSave={() => {}}  
         initialDate={selectedDate}  // Pass the date as a string
-    />
+        task={selectedTask}   // Add this line to pass the selected session
+      />
 
       <Modal size="4xl" isOpen={isOpen} onOpenChange={onOpenChange}>
       <ModalContent>

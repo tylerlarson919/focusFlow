@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, DatePicker, Textarea, Button } from '@nextui-org/react';
 import { parseDateTime, CalendarDateTime, CalendarDate, DateValue } from "@internationalized/date";
 import { db } from '../../../firebase'; 
-import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, setDoc, deleteDoc,getDoc,updateDoc, doc } from 'firebase/firestore';
+import { FaCalendar, FaClock, FaEdit, FaRegStickyNote, FaTrash } from "react-icons/fa";
+
 
 interface TaskModalProps {
     isOpen: boolean;
@@ -30,24 +32,32 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
     );
 
     useEffect(() => {
-        if (initialDate) {
-            const calendarDateTime = parseDateTime(convertToISODate(initialDate));
-            const formattedDate = formatDate(calendarDateTime);
-            setDate(formattedDate);
-        } else if (task?.date) {
-            const calendarDateTime = parseDateTime(task.date);
-            const formattedDate = formatDate(calendarDateTime);
-            setDate(formattedDate);
+        if (isOpen) {
+            if (task) {
+                // Populate the modal with the selected task's data
+                setDate(task.date || null);
+                setName(task.name || '');
+                setDescription(task.description || '');
+            } else {
+                // Reset the modal for a new task
+                setDate(initialDate ? formatDate(parseDateTime(convertToISODate(initialDate))) : null);
+                setName('');
+                setDescription('');
+            }
         }
-    }, [initialDate, task?.date]);
+    }, [isOpen, task, initialDate]);
+    
+    
+    
 
     const [name, setName] = useState<string>(task?.name || '');
     const [description, setDescription] = useState<string>(task?.description || '');
 
+    
     const handleSave = async () => {
         if (date) {
             const taskToSave = {
-                id: task?.id || `${Date.now()}`,
+                id: task?.id || `${Date.now()}`, // Ensure id is included
                 date: date, // Use the date as-is
                 name,
                 description,
@@ -55,16 +65,17 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
             };
     
             try {
-                if (task?.id) {
+                const taskRef = doc(db, 'tasks', taskToSave.id);
+                const docSnap = await getDoc(taskRef);
+    
+                if (docSnap.exists()) {
                     // Update existing task
-                    const taskRef = doc(db, 'tasks', task.id);
                     await updateDoc(taskRef, taskToSave);
                 } else {
-                    // Add new task
-                    await addDoc(collection(db, 'tasks'), taskToSave);
+                    // Create new task
+                    await setDoc(taskRef, taskToSave); // Use setDoc to create with specific ID
                 }
     
-                // Convert date to JavaScript Date only if needed for other purposes
                 const [year, month, day, hour, minute] = date.split(/[-T:]/);
                 const jsDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
     
@@ -77,20 +88,47 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
         }
     };
     
+    
+    
+    
+
+    
+    
+    
     const handleDateChange = (newDate: CalendarDateTime) => {
         const formattedDate = formatDate(newDate);
-        console.log('Formatted Date:', formattedDate);
-
-        // Update state with formatted date
         setDate(formattedDate);
     };
 
+    
+
+
     return (
-        <Modal isOpen={isOpen} onOpenChange={onClose}>
+        <Modal size="4xl" isOpen={isOpen} onOpenChange={onClose}>
             <ModalContent>
-                <ModalHeader>
-                    {task ? 'Edit Task' : 'New Task'}
-                </ModalHeader>
+            <ModalHeader className="items-center flex flex-row gap-3 text-3xl">
+            {task && (
+                <FaTrash
+                className="text-2xl text-red-500 cursor-pointer"
+                onClick={async () => {
+                    if (task) {
+                    try {
+                        const sessionRef = doc(db, 'tasks', task.id);
+                        await deleteDoc(sessionRef);  // Function to delete the document
+                        onClose();  // Close the modal after deleting
+                        console.log('Task deleted successfully');
+                    } catch (error) {
+                        console.error('Error deleting task:', error);
+                    }
+                    }
+                }}
+                />
+            )}
+            {task ? 'Edit Task' : 'New Task'}
+            </ModalHeader>
+
+
+
                 <ModalBody>
                     <DatePicker
                         label="Date"

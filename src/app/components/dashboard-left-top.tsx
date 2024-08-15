@@ -9,17 +9,19 @@ import { format } from 'date-fns';
 
 
 interface LeftTopProps {
-  onNewTaskClick: (isClicked: boolean, date: Date) => void; // Update this line
+  onNewTaskClick: (isClicked: boolean, date: Date) => void;
+  onEditTaskClick: (isClicked: boolean, task: any) => void; // Add this line
+  tasks: any[];
+  setTasks: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
-const LeftTop: React.FC<LeftTopProps> = ({ onNewTaskClick }) => {
+const LeftTop: React.FC<LeftTopProps> = ({ onNewTaskClick, onEditTaskClick, tasks, setTasks }) => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [calendarVisible, setCalendarVisible] = useState<boolean>(false);
   const [calendarPosition, setCalendarPosition] = useState<{top: number, left: number} | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
 
-  const [tasks, setTasks] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
   const [tasksPerPage] = useState<number>(10);
 
@@ -87,6 +89,13 @@ const paginatedTasks = filteredAndSortedTasks.slice(indexOfFirstTask, indexOfLas
 const totalPages = Math.ceil(filteredAndSortedTasks.length / tasksPerPage);
 
 
+const handleRowAction = (key: React.Key) => {
+  const selectedTask = tasks.find(task => task.id === key.toString());
+  if (selectedTask) {
+    // Call the edit task function
+    onEditTaskClick(true, selectedTask);
+  }
+};
 
 
   const handlePrevDay = () => {
@@ -196,7 +205,13 @@ const totalPages = Math.ceil(filteredAndSortedTasks.length / tasksPerPage);
       <Button className="flex justify-center items-center" size="md" onClick={() => {
         onNewTaskClick(true, currentDate); 
       }}>New Task</Button>
-      <Table color="secondary" selectionMode="single" aria-label="Task logs" removeWrapper>
+      <Table
+        color="secondary"
+        selectionMode="single"
+        aria-label="Task logs"
+        removeWrapper
+        onRowAction={handleRowAction}
+      >
         <TableHeader columns={[
           { key: 'name', label: 'Name' },
           { key: 'date', label: 'Date' },
