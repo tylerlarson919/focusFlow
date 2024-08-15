@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, Tab } from '@nextui-org/tabs';
 import { Image, ScrollShadow, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button, Modal, ModalBody, ModalHeader, ModalContent, ModalFooter } from '@nextui-org/react';
-import { usePathname } from "next/navigation";
 import styles from './dashboard-right-top.module.css';
 import { LogSession, getSessions, db } from "../../../firebase";
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -24,7 +23,6 @@ const RightSide: React.FC = () => {
   // Stopwatch state
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [time, setTime] = useState(0);
 
   // Timer state
   const [timerDuration, setTimerDuration] = useState(0);
@@ -45,6 +43,8 @@ const RightSide: React.FC = () => {
   const [currentStage, setCurrentStage] = useState<number>(4);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [plantsAtStage4, setPlantsAtStage4] = useState<{ id: number }[]>([]);
+  const [elapsedTime, setElapsedTime] = useState(0); // Initialize with 0 or other default value
+
 
   const playSound = () => {
     if (audioRef.current) {
@@ -109,7 +109,7 @@ useEffect(() => {
     setIsRunning(true);
     setIsPaused(savedIsPaused);
     setStartTime(new Date(savedStartTime));
-    setTime(parseInt(savedTime, 10));
+    setElapsedTime(parseInt(savedTime, 10));
     setCurrentPlant(parseInt(savedPlant || '1')); // Restore current plant
     setTabsSelected('stopwatch');  // Default to the Stopwatch tab
 
@@ -138,23 +138,34 @@ useEffect(() => {
   
   useEffect(() => {
     if (isRunning && !isPaused && startTime) {
-      const elapsedTime = Math.floor((new Date().getTime() - startTime.getTime()) / 1000); // Elapsed time in seconds
+      const interval = setInterval(() => {
+        const currentTime = new Date().getTime();
+        const elapsedTime = Math.floor((currentTime - startTime.getTime()) / 1000); // Elapsed time in seconds
   
-      // Define the stages for stopwatch
-      const stageTimes = [0, 900, 1800, 2700]; // 0s, 15m, 30m, 45m in seconds
+        // Restore stageTimes array
+        const stageTimes = [0, 900, 1800, 2700]; // 0s, 15m, 30m, 45m in seconds
   
-      let stage = 1;
-      for (let i = 0; i < stageTimes.length; i++) {
-        if (elapsedTime >= stageTimes[i]) {
-          stage = i + 1;
-        } else {
-          break;
+        let stage = 1;
+        for (let i = 0; i < stageTimes.length; i++) {
+          if (elapsedTime >= stageTimes[i]) {
+            stage = i + 1;
+          } else {
+            break;
+          }
         }
-      }
   
-      setCurrentStage(stage);
+        setCurrentStage(stage);
+  
+        // Update elapsed time display
+        setElapsedTime(elapsedTime);
+      }, 1000); // Update every second
+  
+      // Cleanup interval on component unmount or when stopwatch is paused/stopped
+      return () => clearInterval(interval);
     }
   }, [isRunning, isPaused, startTime]);
+  
+  
   
   
   
@@ -197,11 +208,12 @@ useEffect(() => {
     setIsRunning(true);
     setIsPaused(false);
     setStartTime(start);
+    setElapsedTime(0); // Initialize elapsedTime to 0
     localStorage.setItem('startTime', start.toISOString());
     localStorage.setItem('time', '0');
     localStorage.setItem('isPaused', 'false');
     localStorage.setItem('currentPlant', currentPlant.toString());
-    
+  
     setCurrentStage(1); // Initialize plant stage
   
     try {
@@ -228,10 +240,11 @@ useEffect(() => {
   
   
   
+  
 
   const handlePause = () => {
     setIsPaused(true);
-    localStorage.setItem('time', time.toString());
+    localStorage.setItem('time', elapsedTime.toString());
     localStorage.setItem('isPaused', 'true');
   };
 
@@ -320,7 +333,7 @@ useEffect(() => {
     setIsTimerEnded(true);
     setStartTime(null);
     setTimerTime(0);
-    setTime(0);
+    setElapsedTime(0);
     setIsRunning(false);
     setIsPaused(false);
   };
@@ -387,7 +400,7 @@ useEffect(() => {
         <div className={styles.infoLeft}>
           {tabsSelected === 'stopwatch' ? (
             <>
-              <h3>{formatTime(time)}</h3>
+              <h3>{formatTime(elapsedTime)}</h3>
               <div className={styles.buttons}>
                 {isRunning && !isPaused ? (
                   <>

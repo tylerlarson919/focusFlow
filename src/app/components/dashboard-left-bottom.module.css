@@ -1,8 +1,8 @@
 .leftBottomFrame {
     width: 100%;
     height: 40%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.leftBottomFrame {
-    background-color: #808080; /* Example color for bottom frames */
-  }
