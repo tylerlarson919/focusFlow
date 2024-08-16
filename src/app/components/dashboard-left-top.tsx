@@ -61,7 +61,7 @@ const LeftTop: React.FC<LeftTopProps> = ({ onNewTaskClick, onEditTaskClick, task
     });
   
     return () => unsubscribe(); // Clean up the listener on unmount
-  }, []);
+  }, [setTasks]);
   
 
   useEffect(() => {

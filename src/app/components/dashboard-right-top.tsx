@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tabs, Tab } from '@nextui-org/tabs';
 import { Image, ScrollShadow, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button, Modal, ModalBody, ModalHeader, ModalContent, ModalFooter } from '@nextui-org/react';
 import styles from './dashboard-right-top.module.css';
@@ -130,7 +130,7 @@ useEffect(() => {
     const elapsedTime = Math.floor((now.getTime() - (startTime?.getTime() || 0)) / 1000);
     localStorage.setItem('time', elapsedTime.toString());
   }
-}, []);
+}, [startTime]);
 
   
   
@@ -198,30 +198,7 @@ useEffect(() => {
   }, []);
   
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-  
-    if (isTimerRunning && !isTimerEnded) {
-      interval = setInterval(() => {
-        setTimerTime(prevTime => {
-          if (prevTime <= 1) {
-            setIsTimerRunning(false);
-            setIsTimerEnded(true);
-            playSound(); // Play sound when timer ends
-            handleEnd();
-            return 0;
-          }
-          return prevTime - 1;
-        });
-      }, 1000);
-    } else {
-      if (interval) clearInterval(interval);
-    }
-  
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isTimerRunning, isTimerEnded]);
+;
   
   
   
@@ -363,6 +340,30 @@ useEffect(() => {
   };
   
   
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+  
+    if (isTimerRunning && !isTimerEnded) {
+      interval = setInterval(() => {
+        setTimerTime(prevTime => {
+          if (prevTime <= 1) {
+            setIsTimerRunning(false);
+            setIsTimerEnded(true);
+            playSound(); // Play sound when timer ends
+            handleEnd();
+            return 0;
+          }
+          return prevTime - 1;
+        });
+      }, 1000);
+    } else {
+      if (interval) clearInterval(interval);
+    }
+  
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isTimerRunning, isTimerEnded, handleEnd]);
   
   
   
@@ -401,9 +402,10 @@ useEffect(() => {
   const [tabsSelected, setTabsSelected] = useState<string>('timer');
 
 
-  const handleTabChange = (key: string | number) => {
+  const handleTabChange = useCallback((key: string | number) => {
     setTabsSelected(key.toString());
-  };
+  }, []);
+  
   const handleImageClick = () => {
     setIsOpen(true);
   };
