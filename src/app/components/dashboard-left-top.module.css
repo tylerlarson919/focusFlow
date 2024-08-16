@@ -7,10 +7,11 @@
     justify-content: flex-start;
     gap: 10px;
     position: relative;
-    overflow: overlay;
 }
 
-
+.table {
+  overflow: overlay;
+}
 
   .paginationContainer {
     display: flex;

@@ -13,6 +13,7 @@
     "@nextui-org/react": "^2.4.6",
     "@react-aria/grid": "^3.10.1",
     "@react-stately/collections": "^3.10.9",
+    "canvas": "^2.11.2",
     "date-fns": "^3.6.0",
     "firebase": "^10.12.5",
     "firebase-admin": "^12.3.1",

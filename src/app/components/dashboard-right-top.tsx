@@ -313,6 +313,7 @@ useEffect(() => {
           endDate: end.toISOString(), // Save end date as ISO string
           length: length,
           plantStage: currentStage, // Update the stage here
+          plantNumber: currentPlant,
         });
   
         console.log('Session updated successfully with end date and duration.');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button, ButtonGroup, Table, TableBody, TableHeader, TableColumn, TableRow, TableCell } from '@nextui-org/react';
+import { ScrollShadow, Calendar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button, ButtonGroup, Table, TableBody, TableHeader, TableColumn, TableRow, TableCell } from '@nextui-org/react';
 import { CalendarDate } from '@internationalized/date'; 
 import styles from './dashboard-left-top.module.css';
 import { getTasks, db } from '../../../firebase';
@@ -200,7 +200,8 @@ const handleRowAction = (key: React.Key) => {
       <Button className="flex justify-center items-center" size="md" onClick={() => {
         onNewTaskClick(true, currentDate); 
       }}>New Task</Button>
-      <Table
+      <ScrollShadow className="w-[100%] h-[400px]" hideScrollBar>
+      <Table className={styles.table}
         color="secondary"
         selectionMode="single"
         aria-label="Task logs"
@@ -266,8 +267,8 @@ const handleRowAction = (key: React.Key) => {
         </TableBody>
 
       </Table>
-
-    </div>
+    </ScrollShadow>
+  </div>
 
   );
 };
