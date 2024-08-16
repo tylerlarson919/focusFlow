@@ -7,3 +7,6 @@
     border-radius: 60px;
     border: 2px solid var(--dark3);
 }
+.table {
+  overflow: overlay;
+}

@@ -63,10 +63,13 @@ const RightSide: React.FC = () => {
     try {
       const response = await fetch(src, { method: 'HEAD' });
       return response.ok;
-    } catch {
+    } catch (error) {
+      // Optionally log the error to an internal log or handle silently
       return false;
     }
   };
+  
+  
 
   useEffect(() => {
     if (timerDuration > 0) {
@@ -80,21 +83,31 @@ const RightSide: React.FC = () => {
   
   
 
-useEffect(() => {
-  fetch('/plant_images/plantImages.json')
-    .then(response => response.json())
-    .then(async (data: string[]) => {
-      const validImages = await Promise.all(
-        data.map(async (_, index) => {
-          const imgSrc = `/plant_images/plant_${index + 1}_stage_4.png`;
-          const exists = await checkImageExists(imgSrc);
-          return exists ? { id: index + 1 } : null;
-        })
-      );
-      setPlantsAtStage4(validImages.filter(Boolean) as { id: number }[]);
-    })
-    .catch(error => console.error('Error fetching plant images:', error));
-}, []);
+  useEffect(() => {
+    fetch('/plant_images/plantImages.json')
+      .then(response => response.json())
+      .then(async (data: string[]) => {
+        const validImages = await Promise.all(
+          data.map(async (filename) => {
+            const imgSrc = `/plant_images/${filename}`;
+            const exists = await checkImageExists(imgSrc);
+            if (exists) {
+              const id = parseInt(filename.split('_')[1], 10);
+              return { id }; // Ensure id is a number
+            }
+            return null;
+          })
+        );
+  
+        // Filter out null values and assert the type
+        setPlantsAtStage4(
+          validImages.filter((item): item is { id: number } => item !== null) as { id: number }[]
+        );
+      })
+      .catch(error => console.error('Error fetching plant images:', error));
+  }, []);
+  
+  
   
 
 
@@ -103,13 +116,13 @@ useEffect(() => {
   const savedStartTime = localStorage.getItem('startTime');
   const savedTime = localStorage.getItem('time');
   const savedIsPaused = localStorage.getItem('isPaused') === 'true';
-  const savedPlant = localStorage.getItem('currentPlant');
 
   if (savedSessionId && savedStartTime && savedTime) {
     setIsRunning(true);
     setIsPaused(savedIsPaused);
     setStartTime(new Date(savedStartTime));
     setElapsedTime(parseInt(savedTime, 10));
+    let savedPlant: string | null = localStorage.getItem('savedPlant');
     setCurrentPlant(parseInt(savedPlant || '1')); // Restore current plant
     setTabsSelected('stopwatch');  // Default to the Stopwatch tab
 
@@ -168,11 +181,21 @@ useEffect(() => {
   
   
   
+  useEffect(() => {
+    const fetchMostRecentSession = async () => {
+      try {
+        const sessions = await getSessions(); // Fetch all sessions
+        if (sessions && sessions.length > 0) {
+          const mostRecentSession = sessions.sort((a, b) => b.startDate - a.startDate)[0]; // Sort by startDate to get the most recent
+          setCurrentPlant(mostRecentSession.plantNumber); // Set the default plant number
+        }
+      } catch (error) {
+        console.error('Error fetching sessions:', error);
+      }
+    };
   
-  
-  
-  
-  
+    fetchMostRecentSession();
+  }, []);
   
 
   useEffect(() => {

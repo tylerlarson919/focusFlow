@@ -1,6 +1,6 @@
 "use client";
 import styles from './dashboard-right-bottom.module.css';
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import {
   Table,
   TableHeader,
@@ -10,6 +10,7 @@ import {
   TableCell,
   getKeyValue,
   Pagination,
+  ScrollShadow
 } from "@nextui-org/react";
 import { LogSession, getSessions } from "../../../firebase";
 import { onSnapshot, collection, Timestamp } from "firebase/firestore";
@@ -199,8 +200,9 @@ useEffect(() => {
     { key: "length", label: "Length" },
     { key: "name", label: "Name" },
   ];
-
   const rowsPerPage = 10;
+
+  
 
   const [page, setPage] = React.useState(1);
 
@@ -220,7 +222,8 @@ useEffect(() => {
   return (
     <div className={styles.leftTopFrame}>
       <div className={styles.tableContainer}>
-        <Table onRowAction={handleRowAction} color="secondary" selectionMode="single" aria-label="Session logs" removeWrapper>
+      <ScrollShadow className="w-[100%] h-[100%]" >
+      <Table className={styles.table} onRowAction={handleRowAction} color="secondary" selectionMode="single" aria-label="Session logs" removeWrapper>
           <TableHeader columns={columns}>
             {(column) => (
               <TableColumn key={column.key}>{column.label}</TableColumn>
@@ -240,6 +243,7 @@ useEffect(() => {
             )}
           </TableBody>
         </Table>
+        </ScrollShadow>
         <div className="flex w-full justify-center absolute bottom-5 right-1">
           <Pagination
             isCompact
