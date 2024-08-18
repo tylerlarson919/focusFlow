@@ -42,3 +42,13 @@
   .paddingBottom {
     padding-bottom: 20px;
   }
+  @media screen and (max-width: 1320px) {
+    .container {
+      flex-direction: column;
+      height: auto;
+    }
+    .leftFrame, .rightFrame {
+      width: 95%;
+      margin: 30px;
+    }
+  }

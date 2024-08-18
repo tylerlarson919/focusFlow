@@ -15,17 +15,21 @@ const Forest: React.FC = () => {
       try {
         const sessionData = await getSessions();
         setSessions(sessionData || []);
-        
-        // Always set the combined image URL if sessions are available
-        const imageUrl = generateCombinedImageUrl();
-        setCombinedImageUrl(imageUrl);
       } catch (error) {
         console.error('Error fetching sessions:', error);
       }
     };
   
     fetchSessions();
-  }, []);
+  }, []); // This runs once on component mount
+  
+  // New useEffect to regenerate the combined image URL whenever sessions update
+  useEffect(() => {
+    if (sessions.length > 0) {
+      const imageUrl = generateCombinedImageUrl();
+      setCombinedImageUrl(imageUrl);
+    }
+  }, [sessions]); 
 
   return (
     <div className={styles.leftBottomFrame}>

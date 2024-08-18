@@ -127,3 +127,9 @@
     background-color: rgb(63, 110, 63);
     color: #edfff9;
   }
+  .buttonsGroup {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+
+  }

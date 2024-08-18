@@ -181,6 +181,7 @@ useEffect(() => {
   
   
   
+  
   useEffect(() => {
     const fetchMostRecentSession = async () => {
       try {
@@ -246,12 +247,27 @@ useEffect(() => {
     setIsPaused(true);
     localStorage.setItem('time', elapsedTime.toString());
     localStorage.setItem('isPaused', 'true');
-  };
+    localStorage.setItem('pauseTime', new Date().toISOString()); // Store pause time
+};
 
-  const handleResume = () => {
-    setIsPaused(false);
-    localStorage.setItem('isPaused', 'false');
-  };
+const handleResume = () => {
+  const pauseTime = new Date(localStorage.getItem('pauseTime') || '');
+  const currentTime = new Date();
+  
+  // Calculate the pause duration in milliseconds
+  const pauseDuration = currentTime.getTime() - pauseTime.getTime();
+  
+  if (startTime) {
+      // Update the start time by adding the pause duration
+      const updatedStartTime = new Date(startTime.getTime() + pauseDuration);
+      setStartTime(updatedStartTime);
+      localStorage.setItem('startTime', updatedStartTime.toISOString());
+  }
+  
+  setIsPaused(false);
+  localStorage.setItem('isPaused', 'false');
+};
+
 
 
 
@@ -438,7 +454,7 @@ useEffect(() => {
                     </Button>
                   </>
                 ) : (
-                  <Button color="secondary" variant="bordered" className="width-100" onClick={handleStart}>
+                  <Button color="secondary" variant="bordered" className="width-100" onClick={isPaused ? handleResume : handleStart }>
                     {isPaused ? 'Resume' : 'Start'}
                   </Button>
                 )}
