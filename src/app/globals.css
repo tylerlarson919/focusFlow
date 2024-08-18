@@ -60,3 +60,13 @@ h3 {
 .width-100 {
   width: 100% !important;
 }
+
+:root {
+  --fc-border-color: rgb(90, 90, 90);
+  --fc-daygrid-event-dot-width: 5px;
+}
+
+.fc-direction-ltr .fc-daygrid-event.fc-event-start,
+.fc-direction-rtl .fc-daygrid-event.fc-event-end {
+    overflow: hidden;
+}
