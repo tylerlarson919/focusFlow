@@ -7,6 +7,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import { EventContentArg } from '@fullcalendar/core';
 import { getTasks } from '../../../firebase';
 import { EventInput } from '@fullcalendar/core';
+import HeaderMain from '../components/header';
 
 const StatsPage: React.FC = () => {
   const [events, setEvents] = useState<EventInput[]>([]);
@@ -35,6 +36,8 @@ const StatsPage: React.FC = () => {
   }, []);
 
   return (
+    <>
+    <HeaderMain />
     <div className={styles.bg}>
       <div className={styles.topFrame}>
         <FullCalendar
@@ -49,6 +52,7 @@ const StatsPage: React.FC = () => {
       </div>
       <div className={styles.bottomFrame}></div>
     </div>
+    </>
   );
 };
 

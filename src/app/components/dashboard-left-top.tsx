@@ -5,7 +5,6 @@ import styles from './dashboard-left-top.module.css';
 import { getTasks, db } from '../../../firebase';
 import { doc, updateDoc, deleteDoc, onSnapshot, collection  } from 'firebase/firestore';
 import { format } from 'date-fns';
-import Link from "next/link";
 
 
 interface LeftTopProps {
@@ -196,9 +195,6 @@ const handleRowAction = (key: React.Key) => {
         )}
       </div>
       <div className={styles.buttonsGroup}>
-      <Link href="/stats" passHref>
-        <Button className="flex justify-center items-center" size="md" >Stats</Button>
-      </Link>
         <Button className="flex justify-center items-center" size="md" onClick={() => {
           onNewTaskClick(true, currentDate); 
         }}>New Task</Button>
@@ -272,6 +268,7 @@ const handleRowAction = (key: React.Key) => {
       </Table>
     </ScrollShadow>
   </div>
+
 
   );
 };

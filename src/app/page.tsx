@@ -5,13 +5,13 @@ import LeftTop from './components/dashboard-left-top';
 import LeftBottom from './components/dashboard-left-bottom';
 import RightTop from './components/dashboard-right-top';
 import RightBottom from './components/dashboard-right-bottom';
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, useDisclosure, Input, select, Textarea } from "@nextui-org/react";
+import { Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Link, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, useDisclosure, Input, select, Textarea } from "@nextui-org/react";
 import { FaCalendar, FaClock, FaEdit, FaRegStickyNote, FaTrash } from "react-icons/fa";
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { db } from '../../firebase.js';
 import TaskModal from './components/task-modal';
-
+import HeaderMain from './components/header';
 
 
 // Define the type for session logs
@@ -35,7 +35,6 @@ const Page: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [tasks, setTasks] = useState<any[]>([]);
-
 
 
   // Handle session selection
@@ -65,6 +64,9 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
 
 
   return (
+<>
+  <HeaderMain />
+
     <div className={styles.container}>
       <div className={styles.leftFrame}>
       <LeftTop
@@ -221,6 +223,7 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
       </ModalContent>
       </Modal>
     </div>
+    </>
   );
 };
 
