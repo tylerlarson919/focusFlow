@@ -9,23 +9,22 @@ const HeaderMain: React.FC = () => {
 
   const menuItems = [
     "Dashboard",
-    "Dashboard",
     "Calendar",
     "Stats",
     "Settings",
   ];
 
   return (
-    <div>
-      <Navbar onMenuOpenChange={setIsMenuOpen} className="w-full">
-        <div className="flex w-full h-full items-center">
+    <div className="z-50">
+      <Navbar onMenuOpenChange={setIsMenuOpen} className="z-50 flex justify-between w-full">
+        <div className="z-50 flex w-full h-full items-center">
           <NavbarMenuToggle
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             className="ml-4"
           />
-          <div className="flex-grow" />
+          <div className="z-50 flex-grow" />
         </div>
-        <NavbarMenu className={`absolute top-0 left-0 h-full transition-width duration-300 ${isMenuOpen ? "w-64" : "w-0"} overflow-hidden`}>
+        <NavbarMenu className={`z-50 absolute left-0 h-full transition-width duration-300 ${isMenuOpen ? "w-64" : "w-0"} overflow-hidden`}>
         {menuItems.map((item, index) => (
             <NavbarMenuItem key={`${item}-${index}`} className="w-full">
                 <Link

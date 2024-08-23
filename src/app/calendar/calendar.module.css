@@ -1,0 +1,164 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background-color: var(--dark1);
+    color: #ffffff;
+    font-family: sans-serif;
+}
+
+.headerColumns {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    padding: 4px 0;
+    background-color: var(--dark1);
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    gap: 0px;
+}
+.header {
+    width: 100%;
+    position: sticky;
+    top: 0;
+    display: flex;
+    z-index: 40;
+
+}
+
+.dayHeader {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.dayText {
+    font-size: 16px;
+    color: var(--purple);
+}
+
+.dateText {
+    font-weight: bold;
+    font-size: 26px;
+    color: var(--text-color);
+    margin-top: -5px;
+}
+ .spacer {
+    width: 59.94px;
+ }
+
+.body {
+    display: flex;
+    flex: 1;
+    flex-direction: row;
+    height: 100%;
+    width: 100%;
+}
+
+.timeSlot {
+    height: 200px; /* Height of each time slot */
+    position: relative;
+}
+
+.timeColumn {
+    margin-top: -10px;
+}
+
+.timeSlotTime {
+    height: 200px; /* Height of each time slot */
+    position: relative;
+    color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+ .lineIcons {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 25px;
+    padding-bottom: 25px;
+
+ }
+
+.timeText {
+    font-size: 14px;
+}
+
+.dayColumns {
+    display: flex; /* Ensure day columns are laid out in a row */
+    flex-grow: 1;
+    overflow-x: hidden; /* Allows horizontal scrolling */
+    gap: 10px;
+
+
+  }  
+
+.dayColumn {
+    flex: 1; /* Ensures each column takes up equal space */
+    border: 1px solid #4444445e;
+    border-radius: 20px;
+    
+  }
+  
+
+
+  .timeSlot {
+    height: 200px; /* Increase row height */
+    position: relative;
+}
+
+
+.eventCard {
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
+    background-color: var(--dark3);
+    color: #ffffff;
+    transition: background 0.2s ease;
+    pointer-events: auto
+}
+
+.eventCard:hover {
+    background: linear-gradient(90deg, rgba(53,53,57,0) 0%, rgba(255, 255, 255, 0.312) 100%);
+
+}
+
+
+.eventTitle {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.eventSubtitle {
+    font-size: 12px;
+    color: #cccccc;
+}
+
+.eventTime {
+    font-size: 12px;
+    color: #cccccc;
+}
+
+.body::-webkit-scrollbar {
+    width: 5px;
+    background-color: #333;
+}
+
+.body::-webkit-scrollbar-thumb {
+    background-color: #555;
+    border-radius: 5px;
+}

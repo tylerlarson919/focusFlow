@@ -3,7 +3,7 @@ import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, DatePi
 import { parseDateTime, CalendarDateTime, CalendarDate, DateValue } from "@internationalized/date";
 import { db } from '../../../firebase'; 
 import { collection, addDoc, setDoc, deleteDoc,getDoc,updateDoc, doc } from 'firebase/firestore';
-import { FaCalendar, FaClock, FaEdit, FaRegStickyNote, FaTrash } from "react-icons/fa";
+import { FaCalendar, FaTrash } from "react-icons/fa";
 
 
 interface TaskModalProps {

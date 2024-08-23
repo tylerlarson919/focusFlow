@@ -64,7 +64,7 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
 
 
   return (
-<>
+<div className="overflow-hidden">
   <HeaderMain />
 
     <div className={styles.container}>
@@ -223,7 +223,7 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
       </ModalContent>
       </Modal>
     </div>
-    </>
+    </div>
   );
 };
 
