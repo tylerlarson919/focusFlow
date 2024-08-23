@@ -59,7 +59,7 @@
 }
 
 .timeSlot {
-    height: 200px; /* Height of each time slot */
+    height: auto; /* Height of each time slot */
     position: relative;
 }
 
@@ -116,8 +116,8 @@
 
 .eventCard {
     position: absolute;
-    top: 0px;
-    bottom: 0px;
+    top: 5px;
+    bottom: 5px;
     left: 0px;
     right: 0px;
     border-radius: 4px;

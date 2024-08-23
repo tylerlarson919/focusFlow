@@ -18,17 +18,21 @@ type Event = {
 const generateDummyEvents = (): Event[] => {
   const events: Event[] = [];
   for (let i = 0; i < 10; i++) {
+    const start = new Date(2024, 7, 19 + Math.floor(Math.random() * 7), Math.floor(Math.random() * 24), 0);
+    const end = new Date(start.getTime() + Math.floor(Math.random() * 120) * 60000); // End is within 2 hours after start
+
     events.push({
       id: i,
       title: `Person ${i + 1}`,
       subtitle: `Meeting with team`,
-      start: new Date(2024, 7, 19 + Math.floor(Math.random() * 7), Math.floor(Math.random() * 24), 0),
-      end: new Date(2024, 7, 19 + Math.floor(Math.random() * 7), Math.floor(Math.random() * 24), 0),
+      start,
+      end,
       status: Math.random() > 0.5 ? 'Available' : 'Busy',
     });
   }
   return events;
 };
+
 
 const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const timeSlots = Array.from({ length: 24 }, (_, i) => {
@@ -60,6 +64,46 @@ const Calendar: React.FC = () => {
     }
     return displayedDates;
   };
+
+  // Calculate the height of an event card based on its duration
+  const getEventCardHeight = (start: Date, end: Date): number => {
+    // Ensure end date is not before start date
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    
+    // If the event spans multiple days, we will calculate the height by splitting it into daily segments
+    let durationInMinutes = 0;
+  
+    // Calculate total duration in minutes considering multi-day events
+    while (startDate < endDate) {
+      const nextMidnight = new Date(startDate);
+      nextMidnight.setHours(23, 59, 59, 999);
+      const segmentEnd = new Date(Math.min(endDate.getTime(), nextMidnight.getTime()));
+  
+      durationInMinutes += (segmentEnd.getTime() - startDate.getTime()) / (1000 * 60);
+      startDate.setDate(startDate.getDate() + 1);
+      startDate.setHours(0, 0, 0, 0);
+    }
+    
+    const minHeight = 200 / 12; // Height for 5 minutes
+    const height = Math.max(minHeight, (durationInMinutes * minHeight) / 5);
+    
+    // Round down to nearest pixel
+    const roundedHeight = Math.floor(height);
+    
+    // Debugging output
+    console.log('Event Start:', start);
+    console.log('Event End:', end);
+    console.log('Duration (minutes):', durationInMinutes);
+    console.log('Calculated Height:', roundedHeight);
+    
+    return roundedHeight;
+  };
+  
+  
+  
+
+
 
   const handleDragStart = (event: Event, e: React.DragEvent) => {
     e.stopPropagation();
@@ -170,10 +214,14 @@ const Calendar: React.FC = () => {
                     );
 
                     return (
-                      <div key={timeIndex} className={styles.timeSlot}>
+                      <div
+                        key={timeIndex}
+                        className={styles.timeSlot}
+                      >
                         {eventForTime ? (
                           <div
                             className={`${styles.eventCard} ${eventForTime.status === 'Busy' ? styles.busy : styles.available}`}
+                            style={{ height: getEventCardHeight(eventForTime.start, eventForTime.end) }}
                             draggable
                             onDragStart={(e) => handleDragStart(eventForTime, e)}
                             onDragEnd={handleDragEnd}
@@ -191,11 +239,12 @@ const Calendar: React.FC = () => {
                             <span className={styles.eventTitle}>{eventForTime.title}</span>
                             <span className={styles.eventSubtitle}>{eventForTime.subtitle}</span>
                             <span className={styles.eventTime}>
-                              {`${eventForTime.start.getHours()}:00 - ${eventForTime.end.getHours()}:00`}
+                              {`${eventForTime.start.getHours() % 12 || 12}:${eventForTime.start.getMinutes().toString().padStart(2, '0')} ${eventForTime.start.getHours() < 12 ? 'AM' : 'PM'} - ${eventForTime.end.getHours() % 12 || 12}:${eventForTime.end.getMinutes().toString().padStart(2, '0')} ${eventForTime.end.getHours() < 12 ? 'AM' : 'PM'}`}
                             </span>
                           </div>
                         ) : null}
                       </div>
+
                     );
                   })}
                 </div>
