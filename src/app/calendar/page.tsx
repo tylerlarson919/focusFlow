@@ -8,7 +8,7 @@ import startOfWeek from "date-fns/startOfWeek";
 import getDay from "date-fns/getDay";
 import enUS from "date-fns/locale/en-US";
 import HeaderMain from "../components/header";
-import { Button, ButtonGroup } from "@nextui-org/react";
+import { Button, ButtonGroup, DropdownMenu, Dropdown, DropdownTrigger, DropdownItem } from "@nextui-org/react";
 import "./react-big-calendar.css";
 import CustomToolbar from "./custom-toolbar";
 import TaskModal from "../components/task-modal";
@@ -233,21 +233,35 @@ const MyCalendar = () => {
     <div className="h-screen flex flex-col">
       <HeaderMain />
       <div className="flex items-center justify-between p-4">
-        <div className="w-96"></div>
+        <div className="w-24"></div>
         <div className="flex justify-center items-center gap-6 flex-1 text-center">
           <Button variant="light" onClick={() => navigate('prev')}>&lt;</Button> {/* Left Arrow */}
           <h2 className="text-lg font-bold">
-            {localizer.format(currentDate, "MMMM yyyy")}
+            {view === Views.MONTH && localizer.format(currentDate, "MMMM yyyy")}
+            {view === Views.WEEK && `Week of ${localizer.format(currentDate, "MMM d, yyyy")}`}
+            {(view === Views.DAY || view === Views.AGENDA) && localizer.format(currentDate, "MMM d, yyyy")}
           </h2>
+
           <Button variant="light" onClick={() => navigate('next')}>&gt;</Button> {/* Right Arrow */}
         </div>
-        
-        <ButtonGroup className="w-96">
-          <Button onClick={() => handleViewChange(Views.MONTH)}>Month</Button>
-          <Button onClick={() => handleViewChange(Views.WEEK)}>Week</Button>
-          <Button onClick={() => handleViewChange(Views.DAY)}>Day</Button>
-          <Button onClick={() => handleViewChange(Views.AGENDA)}>Agenda</Button>
-        </ButtonGroup>
+        <div className="w-24 flex justify-center">
+        <Dropdown>
+          <DropdownTrigger>
+            <Button variant="flat">
+              {view.charAt(0).toUpperCase() + view.slice(1).toLowerCase()}
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu 
+            aria-label="Select View" 
+            onAction={(key) => handleViewChange(key as View)}
+          >
+            <DropdownItem key={Views.MONTH}>Month</DropdownItem>
+            <DropdownItem key={Views.WEEK}>Week</DropdownItem>
+            <DropdownItem key={Views.DAY}>Day</DropdownItem>
+            <DropdownItem key={Views.AGENDA}>Agenda</DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
+        </div>
       </div>
 
       <div className="flex-1">
