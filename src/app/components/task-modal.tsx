@@ -37,6 +37,11 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
         task?.endDate || ''
     );
 
+    const handleClose = () => {
+        setShowColorPicker(false);
+        onClose();
+    };
+
     useEffect(() => {
         if (isOpen) {
             if (task) {
@@ -121,7 +126,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
 
 
     return (
-        <Modal size="4xl" isOpen={isOpen} onOpenChange={onClose}>
+        <Modal size="4xl" isOpen={isOpen} onOpenChange={handleClose}>
             <ModalContent>
             <ModalHeader className="items-center flex flex-row gap-3 text-3xl">
                 {task && (

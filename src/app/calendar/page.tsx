@@ -57,30 +57,34 @@ const MyCalendar = () => {
   const [selectedSession, setSelectedSession] = useState<Task | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
   const [events, setEvents] = useState<MyEvent[]>([]);
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   // Fetch tasks from Firestore
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'tasks'));
-        const tasksData = querySnapshot.docs.map((doc) => {
-          const task = doc.data() as Task;
-          return {
-            title: task.name || "New Task",
-            start: new Date(task.date),
-            end: task.endDate ? new Date(task.endDate) : new Date(task.date),
-            color: task.color || '#007bff',
-            resource: task,
-          };
-        });
-        setEvents(tasksData);
-      } catch (error) {
-        console.error('Error fetching tasks:', error);
-      }
-    };
 
-    fetchTasks();
+  useEffect(() => {
+    fetchTasks(); // Fetch tasks when component mounts
   }, []);
+
+  
+  const fetchTasks = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'tasks'));
+      const tasksData = querySnapshot.docs.map((doc) => {
+        const task = doc.data() as Task;
+        return {
+          title: task.name || "New Task",
+          start: new Date(task.date),
+          end: task.endDate ? new Date(task.endDate) : new Date(task.date),
+          color: task.color || '#007bff',
+          resource: task,
+        };
+      });
+      setEvents(tasksData);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  };
+  
   
 
   const OpenNewTaskModal = (isClicked: boolean, date: Date) => {
@@ -104,35 +108,7 @@ const MyCalendar = () => {
     OpenEditTaskModal(true, event.resource);
   };
 
-  const handleSave = async () => {
-    if (selectedTask) {
-      try {
-        const taskRef = doc(db, 'tasks', selectedTask.id);
-        await updateDoc(taskRef, {
-          name: selectedTask.name || '',
-          description: selectedTask.description || '',
-        });
-        console.log('Task updated successfully');
-  
-        // Fetch tasks again after updating
-        const querySnapshot = await getDocs(collection(db, 'tasks'));
-        const tasksData = querySnapshot.docs.map((doc) => {
-          const task = doc.data() as Task;
-          return {
-            title: task.name || "New Task",
-            start: new Date(task.date),
-            end: task.endDate ? new Date(task.endDate) : new Date(task.date),
-            color: task.color || '#007bff',
-            resource: task,
-          };
-        });
-        setEvents(tasksData);
-  
-      } catch (error) {
-        console.error('Error updating task:', error);
-      }
-    }
-  };
+
   
   const MonthEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
     <div
@@ -149,29 +125,26 @@ const MyCalendar = () => {
     </div>
   );
   
-  const WeekDayEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
-    <div
-      className="rbc-event"
-      style={{ 
-        backgroundColor: event.color || '#007bff',
-        padding: '0px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: '4px'
-      }}
-    >
-      <div 
-        className="rbc-event-content"
-        style={{ 
-          color: 'white',
-          padding: '2px 4px',
-        }}
-      >
-        {event.title}
+  const WeekDayEvent: React.FC<{ event: MyEvent }> = ({ event }) => {
+    const eventStyle = {
+      backgroundColor: event.color || '#007bff', // Use the dynamic color
+      padding: '0px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: '4px',
+      color: 'white',
+    };
+  
+    return (
+      <div className="rbc-event" style={eventStyle}>
+        <div className="rbc-event-content" style={{ padding: '2px 4px' }}>
+          {event.title}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+  
   
   
   const DayEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
@@ -204,6 +177,55 @@ const MyCalendar = () => {
     </div>
   );
   
+  const navigate = (direction: 'prev' | 'next') => {
+    const updateDate = (date: Date) => {
+      switch (view) {
+        case Views.MONTH:
+          return direction === 'next'
+            ? new Date(date.setMonth(date.getMonth() + 1))
+            : new Date(date.setMonth(date.getMonth() - 1));
+        case Views.WEEK:
+          return direction === 'next'
+            ? new Date(date.setDate(date.getDate() + 7))
+            : new Date(date.setDate(date.getDate() - 7));
+        case Views.DAY:
+          return direction === 'next'
+            ? new Date(date.setDate(date.getDate() + 1))
+            : new Date(date.setDate(date.getDate() - 1));
+        case Views.AGENDA:
+          return direction === 'next'
+            ? new Date(date.setDate(date.getDate() + 1))
+            : new Date(date.setDate(date.getDate() - 1));
+        default:
+          return date;
+      }
+    };
+  
+    setCurrentDate(updateDate(currentDate));
+  };
+  
+
+  const handleViewChange = (newView: View) => {
+    setView(newView);
+  
+    const resetDate = () => {
+      const today = new Date();
+      switch (newView) {
+        case Views.MONTH:
+          return new Date(today.getFullYear(), today.getMonth(), 1); // Start of the current month
+        case Views.WEEK:
+          return new Date(today.setDate(today.getDate() - today.getDay())); // Start of the current week
+        case Views.DAY:
+          return new Date(today.setHours(0, 0, 0, 0)); // Start of the current day
+        case Views.AGENDA:
+          return today; // Current day for agenda view
+        default:
+          return today;
+      }
+    };
+  
+    setCurrentDate(resetDate());
+  };
   
 
 
@@ -212,18 +234,22 @@ const MyCalendar = () => {
       <HeaderMain />
       <div className="flex items-center justify-between p-4">
         <div className="w-96"></div>
-        <div className="flex-1 text-center">
+        <div className="flex justify-center items-center gap-6 flex-1 text-center">
+          <Button variant="light" onClick={() => navigate('prev')}>&lt;</Button> {/* Left Arrow */}
           <h2 className="text-lg font-bold">
-            {localizer.format(new Date(), "MMMM yyyy")}
+            {localizer.format(currentDate, "MMMM yyyy")}
           </h2>
+          <Button variant="light" onClick={() => navigate('next')}>&gt;</Button> {/* Right Arrow */}
         </div>
+        
         <ButtonGroup className="w-96">
-          <Button onClick={() => setView(Views.MONTH)}>Month</Button>
-          <Button onClick={() => setView(Views.WEEK)}>Week</Button>
-          <Button onClick={() => setView(Views.DAY)}>Day</Button>
-          <Button onClick={() => setView(Views.AGENDA)}>Agenda</Button>
+          <Button onClick={() => handleViewChange(Views.MONTH)}>Month</Button>
+          <Button onClick={() => handleViewChange(Views.WEEK)}>Week</Button>
+          <Button onClick={() => handleViewChange(Views.DAY)}>Day</Button>
+          <Button onClick={() => handleViewChange(Views.AGENDA)}>Agenda</Button>
         </ButtonGroup>
       </div>
+
       <div className="flex-1">
       <Calendar
         key={events.length}
@@ -234,6 +260,7 @@ const MyCalendar = () => {
         views={['month', 'week', 'day', 'agenda']}
         view={view}
         onView={(newView) => setView(newView)}
+        date={currentDate} // Set the current date here
         components={{
           toolbar: CustomToolbar,
           event: (props) => {
@@ -241,7 +268,7 @@ const MyCalendar = () => {
               case Views.MONTH:
                 return <MonthEvent {...props} />;
               case Views.WEEK:
-                return <WeekDayEvent {...props} />;
+                return <WeekDayEvent {...props} />; // Use the dynamic event component
               case Views.DAY:
                 return <DayEvent {...props} />;
               case Views.AGENDA:
@@ -254,12 +281,18 @@ const MyCalendar = () => {
         style={{ height: "100%" }}
         onSelectEvent={handleSelectEvent}
       />
+
       </div>
       <TaskModal
         isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
+        onClose={() => { 
+          setIsTaskModalOpen(false);
+          fetchTasks(); // Refresh tasks on modal close
+        }}
         onNewTaskClick={OpenNewTaskModal}
-        onSave={handleSave}
+        onSave={async () => { 
+          await fetchTasks(); // Refresh tasks on save
+        }}
         initialDate={selectedDate}
         task={selectedTask}
       />
