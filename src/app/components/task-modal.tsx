@@ -13,6 +13,7 @@ interface TaskModalProps {
     onSave: (task: Task) => void;
     initialDate?: string;
     task?: Task;
+    color?: string;
 }
 
 const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, onNewTaskClick, initialDate }) => {
@@ -31,37 +32,49 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
         initialDate ? formatDate(parseDateTime(convertToISODate(initialDate))) : null
     );
 
+    // Add this state for handling the end date
+    const [endDate, setEndDate] = useState<string | null>(
+        task?.endDate || ''
+    );
+
     useEffect(() => {
         if (isOpen) {
             if (task) {
                 // Populate the modal with the selected task's data
                 setDate(task.date || null);
+                setEndDate(task.endDate || '');
                 setName(task.name || '');
                 setDescription(task.description || '');
+                setColor(task.color || '#007bff');
             } else {
                 // Reset the modal for a new task
                 setDate(initialDate ? formatDate(parseDateTime(convertToISODate(initialDate))) : null);
+                setEndDate('');
                 setName('');
                 setDescription('');
+                setColor('#007bff');
             }
         }
     }, [isOpen, task, initialDate]);
     
-    
-    
+
 
     const [name, setName] = useState<string>(task?.name || '');
     const [description, setDescription] = useState<string>(task?.description || '');
+    const [color, setColor] = useState<string>(task?.color || '#007bff'); // Default to blue
+    const [showColorPicker, setShowColorPicker] = useState(false);
 
     
     const handleSave = async () => {
         if (date) {
             const taskToSave = {
                 id: task?.id || `${Date.now()}`, // Ensure id is included
-                date: date, // Use the date as-is
+                date, // Use the date as-is
+                endDate: endDate || '', // Ensure endDate is included
                 name,
                 description,
                 status: task?.status || 'Not Started',
+                color, 
             };
     
             try {
@@ -78,7 +91,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
     
                 const [year, month, day, hour, minute] = date.split(/[-T:]/);
                 const jsDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
-    
                 onSave(taskToSave);
                 onNewTaskClick(true, jsDate);
                 onClose(); // Close the modal
@@ -91,14 +103,19 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
     
     
     
+    
 
     
     
-    
-    const handleDateChange = (newDate: CalendarDateTime) => {
+    const handleDateChange = (newDate: CalendarDateTime, type: 'start' | 'end') => {
         const formattedDate = formatDate(newDate);
-        setDate(formattedDate);
+        if (type === 'start') {
+            setDate(formattedDate);
+        } else {
+            setEndDate(formattedDate);
+        }
     };
+    
 
     
 
@@ -107,39 +124,78 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
         <Modal size="4xl" isOpen={isOpen} onOpenChange={onClose}>
             <ModalContent>
             <ModalHeader className="items-center flex flex-row gap-3 text-3xl">
-            {task && (
-                <FaTrash
-                className="text-2xl text-red-500 cursor-pointer"
-                onClick={async () => {
-                    if (task) {
-                    try {
-                        const sessionRef = doc(db, 'tasks', task.id);
-                        await deleteDoc(sessionRef);  // Function to delete the document
-                        onClose();  // Close the modal after deleting
-                        console.log('Task deleted successfully');
-                    } catch (error) {
-                        console.error('Error deleting task:', error);
-                    }
-                    }
-                }}
-                />
-            )}
-            {task ? 'Edit Task' : 'New Task'}
+                {task && (
+                    <FaTrash
+                        className="text-2xl text-red-500 cursor-pointer"
+                        onClick={async () => {
+                            if (task) {
+                                try {
+                                    const sessionRef = doc(db, 'tasks', task.id);
+                                    await deleteDoc(sessionRef);  // Function to delete the document
+                                    onClose();  // Close the modal after deleting
+                                    console.log('Task deleted successfully');
+                                } catch (error) {
+                                    console.error('Error deleting task:', error);
+                                }
+                            }
+                        }}
+                    />
+                )}
+                {task ? 'Edit Task' : 'New Task'}
+                <div className="relative items-center justify-center">
+                    <div 
+                        className="w-6 h-6 rounded-full cursor-pointer"
+                        style={{ backgroundColor: color }}
+                        onClick={() => setShowColorPicker(!showColorPicker)}
+                    />
+                    <div 
+                        className={`absolute top-1 bottom-1 left-full ml-1 flex flex-row items-center justify-center shadow-lg z-50 transition-transform transition-opacity duration-300 ease-in-out ${showColorPicker ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'} origin-left`}
+                        style={{ transformOrigin: 'left' }}
+                    >
+                        {['#007bff', '#28a745', '#dc3545', '#ffc107', '#6c757d'].map((clr) => (
+                            <div 
+                                key={clr}
+                                className={`w-5 h-5 rounded-full m-1 cursor-pointer ${clr === color ? 'shadow-lg shadow-[0_0_5px_rgba(255,255,255,0.5)]' : ''}`}
+                                style={{ backgroundColor: clr }}
+                                onClick={() => {
+                                    setColor(clr);
+                                    setShowColorPicker(false);
+                                }}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+
+
             </ModalHeader>
 
 
 
+
                 <ModalBody>
-                    <DatePicker
-                        label="Date"
-                        granularity="minute"
-                        fullWidth
-                        value={date ? parseDateTime(date) : null}
-                        onChange={handleDateChange}
-                        startContent={
-                            <FaCalendar className="text-1xl text-default-400 pointer-events-none flex-shrink-0" />
-                        }
-                    />
+                    <div className='flex flex-row gap-3'>
+                        <DatePicker className='w-1/2'
+                            label="Start Date"
+                            granularity="minute"
+                            fullWidth
+                            value={date ? parseDateTime(date) : null}
+                            onChange={(newDate) => handleDateChange(newDate, 'start')}
+                            startContent={
+                                <FaCalendar className="text-1xl text-default-400 pointer-events-none flex-shrink-0" />
+                            }
+                        />
+                        <DatePicker className='w-1/2'
+                            label="End Date"
+                            granularity="minute"
+                            fullWidth
+                            value={endDate ? parseDateTime(endDate) : null}
+                            onChange={(newDate) => handleDateChange(newDate, 'end')}
+                            startContent={
+                                <FaCalendar className="text-1xl text-default-400 pointer-events-none flex-shrink-0" />
+                            }
+                        />
+                    </div>
                     <Input
                         label="Name"
                         value={name}
@@ -173,7 +229,9 @@ export default TaskModal;
 interface Task {
     id: string;
     date: string;
+    endDate: string;
     name: string;
     description: string;
     status: 'Not Started' | 'In Progress' | 'Completed';
+    color: string;
 }

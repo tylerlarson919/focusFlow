@@ -1,259 +1,270 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from 'react';
-import styles from './calendar.module.css';
-import { GoDash } from "react-icons/go";
-import HeaderMain from '../components/header';
+import React, { useState, useEffect } from "react";
+import { Calendar, dateFnsLocalizer, Views, View } from "react-big-calendar";
+import format from "date-fns/format";
+import parse from "date-fns/parse";
+import startOfWeek from "date-fns/startOfWeek";
+import getDay from "date-fns/getDay";
+import enUS from "date-fns/locale/en-US";
+import HeaderMain from "../components/header";
+import { Button, ButtonGroup } from "@nextui-org/react";
+import "./react-big-calendar.css";
+import CustomToolbar from "./custom-toolbar";
+import TaskModal from "../components/task-modal";
+import { doc, updateDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
+import { db } from '../../../firebase.js';
+import { color } from "framer-motion";
 
-
-type Event = {
-  id: number;
-  title: string;
-  subtitle: string;
-  start: Date;
-  end: Date;
-  status: 'Available' | 'Busy';
+const locales = {
+  "en-US": enUS,
 };
 
-const generateDummyEvents = (): Event[] => {
-  const events: Event[] = [];
-  for (let i = 0; i < 10; i++) {
-    const start = new Date(2024, 7, 19 + Math.floor(Math.random() * 7), Math.floor(Math.random() * 24), 0);
-    const end = new Date(start.getTime() + Math.floor(Math.random() * 120) * 60000); // End is within 2 hours after start
-
-    events.push({
-      id: i,
-      title: `Person ${i + 1}`,
-      subtitle: `Meeting with team`,
-      start,
-      end,
-      status: Math.random() > 0.5 ? 'Available' : 'Busy',
-    });
-  }
-  return events;
-};
-
-
-const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const timeSlots = Array.from({ length: 24 }, (_, i) => {
-  const hour = i % 12 || 12;
-  const ampm = i < 12 ? 'AM' : 'PM';
-  return `${hour}:00 ${ampm}`;
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
 });
 
-const Calendar: React.FC = () => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [currentWeek, setCurrentWeek] = useState(0);
-  const [draggingEvent, setDraggingEvent] = useState<Event | null>(null);
-  const [resizingEvent, setResizingEvent] = useState<{ event: Event, direction: 'top' | 'bottom' } | null>(null);
+interface Task {
+  id: string;
+  startDate: string;
+  endDate: string;
+  date: string;
+  type: string;
+  length: string;
+  name?: string;
+  description?: string;
+  color?: string;
 
+}
+
+interface MyEvent {
+  title: string;
+  start: Date;
+  end: Date;
+  allDay?: boolean;
+  resource?: any;
+  color?: string;
+}
+
+const MyCalendar = () => {
+  const [view, setView] = useState<View>(Views.MONTH);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const [selectedSession, setSelectedSession] = useState<Task | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
+  const [events, setEvents] = useState<MyEvent[]>([]);
+
+  // Fetch tasks from Firestore
   useEffect(() => {
-    setEvents(generateDummyEvents());
+    const fetchTasks = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'tasks'));
+        const tasksData = querySnapshot.docs.map((doc) => {
+          const task = doc.data() as Task;
+          return {
+            title: task.name || "New Task",
+            start: new Date(task.date),
+            end: task.endDate ? new Date(task.endDate) : new Date(task.date),
+            color: task.color || '#007bff',
+            resource: task,
+          };
+        });
+        setEvents(tasksData);
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+      }
+    };
+
+    fetchTasks();
   }, []);
+  
 
-  const getDisplayedDates = () => {
-    const startOfWeek = new Date(2024, 7, 19 + currentWeek * 7);
-    const displayedDates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(startOfWeek);
-      date.setDate(startOfWeek.getDate() + i);
-      displayedDates.push({
-        day: daysOfWeek[i],
-        date: date.getDate(),
-      });
+  const OpenNewTaskModal = (isClicked: boolean, date: Date) => {
+    if (isClicked) {
+      const localDateString = date.toLocaleDateString('en-US');
+      setSelectedTask(null);
+      setSelectedDate(localDateString);
+      setIsTaskModalOpen(true);
     }
-    return displayedDates;
   };
 
-  // Calculate the height of an event card based on its duration
-  const getEventCardHeight = (start: Date, end: Date): number => {
-    // Ensure end date is not before start date
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    
-    // If the event spans multiple days, we will calculate the height by splitting it into daily segments
-    let durationInMinutes = 0;
-  
-    // Calculate total duration in minutes considering multi-day events
-    while (startDate < endDate) {
-      const nextMidnight = new Date(startDate);
-      nextMidnight.setHours(23, 59, 59, 999);
-      const segmentEnd = new Date(Math.min(endDate.getTime(), nextMidnight.getTime()));
-  
-      durationInMinutes += (segmentEnd.getTime() - startDate.getTime()) / (1000 * 60);
-      startDate.setDate(startDate.getDate() + 1);
-      startDate.setHours(0, 0, 0, 0);
+  const OpenEditTaskModal = (isClicked: boolean, task: any) => {
+    if (isClicked) {
+      setSelectedSession(null);
+      setSelectedTask(task);
+      setIsTaskModalOpen(true);
     }
-    
-    const minHeight = 200 / 12; // Height for 5 minutes
-    const height = Math.max(minHeight, (durationInMinutes * minHeight) / 5);
-    
-    // Round down to nearest pixel
-    const roundedHeight = Math.floor(height);
-    
-    // Debugging output
-    console.log('Event Start:', start);
-    console.log('Event End:', end);
-    console.log('Duration (minutes):', durationInMinutes);
-    console.log('Calculated Height:', roundedHeight);
-    
-    return roundedHeight;
-  };
-  
-  
-  
-
-
-
-  const handleDragStart = (event: Event, e: React.DragEvent) => {
-    e.stopPropagation();
-    setDraggingEvent(event);
   };
 
-  const handleDragEnd = () => {
-    setDraggingEvent(null);
-    setResizingEvent(null);
+  const handleSelectEvent = (event: MyEvent) => {
+    OpenEditTaskModal(true, event.resource);
   };
 
-  const handleDrop = (dayIndex: number, timeIndex: number, e: React.DragEvent) => {
-    e.preventDefault();
-    if (!draggingEvent) return;
-
-    const newEvents = events.map(ev => {
-      if (ev.id === draggingEvent.id) {
-        const newStart = new Date(2024, 7, 19 + dayIndex, timeIndex);
-        const duration = (ev.end.getTime() - ev.start.getTime()) / (1000 * 60 * 60); // in hours
-        const newEnd = new Date(newStart.getTime() + duration * 60 * 60 * 1000);
-
-        return { ...ev, start: newStart, end: newEnd };
+  const handleSave = async () => {
+    if (selectedTask) {
+      try {
+        const taskRef = doc(db, 'tasks', selectedTask.id);
+        await updateDoc(taskRef, {
+          name: selectedTask.name || '',
+          description: selectedTask.description || '',
+        });
+        console.log('Task updated successfully');
+  
+        // Fetch tasks again after updating
+        const querySnapshot = await getDocs(collection(db, 'tasks'));
+        const tasksData = querySnapshot.docs.map((doc) => {
+          const task = doc.data() as Task;
+          return {
+            title: task.name || "New Task",
+            start: new Date(task.date),
+            end: task.endDate ? new Date(task.endDate) : new Date(task.date),
+            color: task.color || '#007bff',
+            resource: task,
+          };
+        });
+        setEvents(tasksData);
+  
+      } catch (error) {
+        console.error('Error updating task:', error);
       }
-      return ev;
-    });
-
-    // If holding the Alt key, duplicate the event
-    if (e.altKey) {
-      setEvents([...newEvents, { ...draggingEvent, id: events.length }]);
-    } else {
-      setEvents(newEvents);
     }
-
-    setDraggingEvent(null);
   };
+  
+  const MonthEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
+    <div
+      style={{ 
+        backgroundColor: event.color || '#007bff',
+        paddingTop: '0px',
+        paddingBottom: '0px',
+      }}
+      className="rbc-event"
+    >
+      <div className="rbc-event-content">
+        {event.title}
+      </div>
+    </div>
+  );
+  
+  const WeekDayEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
+    <div
+      className="rbc-event"
+      style={{ 
+        backgroundColor: event.color || '#007bff',
+        padding: '0px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '4px'
+      }}
+    >
+      <div 
+        className="rbc-event-content"
+        style={{ 
+          color: 'white',
+          padding: '2px 4px',
+        }}
+      >
+        {event.title}
+      </div>
+    </div>
+  );
+  
+  
+  const DayEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
+    <div
+      style={{ 
+        backgroundColor: event.color || '#007bff',
+        paddingTop: '0px',
+        paddingBottom: '0px',
+      }}
+      className="rbc-event rbc-event-day"
+    >
+      <div className="rbc-event-content">
+        {event.title}
+      </div>
+    </div>
+  );
+  
+  const AgendaEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
+    <div
+      style={{ 
+        backgroundColor: event.color || '#007bff',
+        paddingTop: '0px',
+        paddingBottom: '0px',
+      }}
+      className="rbc-event rbc-event-agenda"
+    >
+      <div className="rbc-event-content">
+        {event.title}
+      </div>
+    </div>
+  );
+  
+  
 
-  const handleResizeStart = (event: Event, direction: 'top' | 'bottom', e: React.MouseEvent) => {
-    e.stopPropagation();
-    setResizingEvent({ event, direction });
-  };
-
-  const handleResize = (timeIndex: number, e: React.MouseEvent) => {
-    if (!resizingEvent) return;
-
-    const newEvents = events.map(ev => {
-      if (ev.id === resizingEvent.event.id) {
-        let newStart = ev.start;
-        let newEnd = ev.end;
-
-        if (resizingEvent.direction === 'top') {
-          newStart = new Date(ev.start);
-          newStart.setMinutes(0, 0, 0);
-          newStart.setHours(timeIndex);
-        } else if (resizingEvent.direction === 'bottom') {
-          newEnd = new Date(ev.end);
-          newEnd.setMinutes(0, 0, 0);
-          newEnd.setHours(timeIndex + 1);
-        }
-
-        return { ...ev, start: newStart, end: newEnd };
-      }
-      return ev;
-    });
-
-    setEvents(newEvents);
-  };
 
   return (
-    <div className="">
+    <div className="h-screen flex flex-col">
       <HeaderMain />
-        <div className={styles.container} onMouseUp={handleDragEnd}>
-          <div className={styles.header}>
-            <div className={styles.spacer}></div>
-            <div className={styles.headerColumns}>
-              {getDisplayedDates().map((day, index) => (
-                <div key={index} className={styles.dayHeader}>
-                  <span className={styles.dayText}>{day.day}</span>
-                  <span className={styles.dateText}>{day.date}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className={styles.body}>
-            <div className={styles.timeColumn}>
-              {timeSlots.map((time, index) => (
-                <div key={index} className={styles.timeSlotTime}>
-                  <span className={styles.timeText}>{time}</span>
-                  <div className={styles.lineIcons}>
-                    <GoDash />
-                    <GoDash />
-                    <GoDash />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className={styles.dayColumns}>
-              {getDisplayedDates().map((_, dayIndex) => (
-                <div
-                  key={dayIndex}
-                  className={`${styles.dayColumn} ${styles.flexColumn}`}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(dayIndex, Math.floor(e.clientY / 110), e)}
-                >
-                  {timeSlots.map((_, timeIndex) => {
-                    const eventForTime = events.find(event =>
-                      new Date(event.start).getDate() === new Date(2024, 7, 19 + dayIndex).getDate() &&
-                      new Date(event.start).getHours() === timeIndex
-                    );
-
-                    return (
-                      <div
-                        key={timeIndex}
-                        className={styles.timeSlot}
-                      >
-                        {eventForTime ? (
-                          <div
-                            className={`${styles.eventCard} ${eventForTime.status === 'Busy' ? styles.busy : styles.available}`}
-                            style={{ height: getEventCardHeight(eventForTime.start, eventForTime.end) }}
-                            draggable
-                            onDragStart={(e) => handleDragStart(eventForTime, e)}
-                            onDragEnd={handleDragEnd}
-                            onMouseDown={(e) => {
-                              if (e.shiftKey) {
-                                handleResizeStart(eventForTime, 'bottom', e);
-                              }
-                            }}
-                            onMouseMove={(e) => {
-                              if (resizingEvent) {
-                                handleResize(timeIndex, e);
-                              }
-                            }}
-                          >
-                            <span className={styles.eventTitle}>{eventForTime.title}</span>
-                            <span className={styles.eventSubtitle}>{eventForTime.subtitle}</span>
-                            <span className={styles.eventTime}>
-                              {`${eventForTime.start.getHours() % 12 || 12}:${eventForTime.start.getMinutes().toString().padStart(2, '0')} ${eventForTime.start.getHours() < 12 ? 'AM' : 'PM'} - ${eventForTime.end.getHours() % 12 || 12}:${eventForTime.end.getMinutes().toString().padStart(2, '0')} ${eventForTime.end.getHours() < 12 ? 'AM' : 'PM'}`}
-                            </span>
-                          </div>
-                        ) : null}
-                      </div>
-
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className="flex items-center justify-between p-4">
+        <div className="w-96"></div>
+        <div className="flex-1 text-center">
+          <h2 className="text-lg font-bold">
+            {localizer.format(new Date(), "MMMM yyyy")}
+          </h2>
         </div>
+        <ButtonGroup className="w-96">
+          <Button onClick={() => setView(Views.MONTH)}>Month</Button>
+          <Button onClick={() => setView(Views.WEEK)}>Week</Button>
+          <Button onClick={() => setView(Views.DAY)}>Day</Button>
+          <Button onClick={() => setView(Views.AGENDA)}>Agenda</Button>
+        </ButtonGroup>
       </div>
+      <div className="flex-1">
+      <Calendar
+        key={events.length}
+        localizer={localizer}
+        events={events}
+        startAccessor="start"
+        endAccessor="end"
+        views={['month', 'week', 'day', 'agenda']}
+        view={view}
+        onView={(newView) => setView(newView)}
+        components={{
+          toolbar: CustomToolbar,
+          event: (props) => {
+            switch (view) {
+              case Views.MONTH:
+                return <MonthEvent {...props} />;
+              case Views.WEEK:
+                return <WeekDayEvent {...props} />;
+              case Views.DAY:
+                return <DayEvent {...props} />;
+              case Views.AGENDA:
+                return <AgendaEvent {...props} />;
+              default:
+                return <MonthEvent {...props} />;
+            }
+          },
+        }}
+        style={{ height: "100%" }}
+        onSelectEvent={handleSelectEvent}
+      />
+      </div>
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        onNewTaskClick={OpenNewTaskModal}
+        onSave={handleSave}
+        initialDate={selectedDate}
+        task={selectedTask}
+      />
+    </div>
   );
 };
 
-export default Calendar;
+export default MyCalendar;

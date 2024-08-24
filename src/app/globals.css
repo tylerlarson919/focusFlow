@@ -30,6 +30,9 @@ body {
 h1 {
   font-size: 46px;
 }
+h2 {
+  font-size: 64px;
+}
 
 h3 {
   font-size: 46px;
@@ -55,6 +58,7 @@ h3 {
   --green: #36D776;
   --red: #FF6258;
   --event-hover: radial-gradient(circle, rgba(63,94,251,1) 0%, rgba(252,70,107,1) 100%);
+  --calendar-lines: #5f5f61;
 }
 
 .width-100 {
@@ -69,4 +73,9 @@ h3 {
 .fc-direction-ltr .fc-daygrid-event.fc-event-start,
 .fc-direction-rtl .fc-daygrid-event.fc-event-end {
     overflow: hidden;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
 }
