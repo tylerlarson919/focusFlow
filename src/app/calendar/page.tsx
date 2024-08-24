@@ -232,17 +232,16 @@ const MyCalendar = () => {
   return (
     <div className="h-screen flex flex-col">
       <HeaderMain />
-      <div className="flex items-center justify-between p-4">
+      <div className="justify-center items-center p-2 flex-col-reverse flex sm:flex-row sm:flex sm:items-center sm:justify-between sm:p-4">
         <div className="w-24"></div>
         <div className="flex justify-center items-center gap-6 flex-1 text-center">
-          <Button variant="light" onClick={() => navigate('prev')}>&lt;</Button> {/* Left Arrow */}
+          <Button variant="light" onClick={() => navigate('prev')}>&lt;</Button>
           <h2 className="text-lg font-bold">
             {view === Views.MONTH && localizer.format(currentDate, "MMMM yyyy")}
             {view === Views.WEEK && `Week of ${localizer.format(currentDate, "MMM d, yyyy")}`}
             {(view === Views.DAY || view === Views.AGENDA) && localizer.format(currentDate, "MMM d, yyyy")}
           </h2>
-
-          <Button variant="light" onClick={() => navigate('next')}>&gt;</Button> {/* Right Arrow */}
+          <Button variant="light" onClick={() => navigate('next')}>&gt;</Button>
         </div>
         <div className="w-24 flex justify-center">
         <Dropdown>
