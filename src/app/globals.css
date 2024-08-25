@@ -48,6 +48,7 @@ h3 {
 
 
 :root {
+  --header-bg: #070707;
   --dark1: #161618;  
   --dark2: #1C1C1E;
   --dark3: #353539;  

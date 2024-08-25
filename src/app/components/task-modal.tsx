@@ -18,10 +18,20 @@ interface TaskModalProps {
 
 const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, onNewTaskClick, initialDate }) => {
     // Convert initialDate to ISO format if provided, otherwise null
-    const convertToISODate = (dateString: string) => {
+    const convertToISODate = (dateString: string): string => {
+        // Check if the date string is already in ISO format
+        const isoDatePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/;
+    
+        if (isoDatePattern.test(dateString)) {
+            // If already in ISO format, return the original string
+            return dateString;
+        }
+    
+        // Otherwise, convert the date from MM/DD/YYYY to YYYY-MM-DDTHH:mm:ss
         const [month, day, year] = dateString.split('/');
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00`;
     };
+    
 
     // Utility function to format CalendarDateTime to string
     const formatDate = (date: CalendarDateTime) => {

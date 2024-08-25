@@ -46,13 +46,26 @@ const Page: React.FC = () => {
 
 const OpenNewTaskModal = (isClicked: boolean, date: Date) => {
   if (isClicked) {
-      const localDateString = date.toLocaleDateString('en-US'); // Format to local date string
-      setSelectedTask(null); // Clear any previously selected task
-      setSelectedDate(localDateString); // Set the formatted date
-      setIsTaskModalOpen(true); // Open the modal
-      console.log('Sending Date: ' + localDateString);
+    // Helper function to format date to 'YYYY-MM-DDTHH:MM'
+    const formatDateForSending = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    const dateToSend = formatDateForSending(date);
+
+    setSelectedTask(null); // Clear any previously selected task
+    setSelectedDate(dateToSend); // Set the formatted date
+    setIsTaskModalOpen(true); // Open the modal
+    console.log('Sending Date: ' + dateToSend);
   }
 };
+
+
 const OpenEditTaskModal = (isClicked: boolean, task: any) => {
   if (isClicked) {
       setSelectedSession(null); // Clear any selected session to avoid conflicts

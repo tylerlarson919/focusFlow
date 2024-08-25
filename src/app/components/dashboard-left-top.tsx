@@ -29,6 +29,7 @@ const LeftTop: React.FC<LeftTopProps> = ({ onNewTaskClick, onEditTaskClick, task
 
 
 
+
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
       await updateDoc(doc(db, "tasks", id), { status: newStatus });
@@ -196,7 +197,18 @@ const handleRowAction = (key: React.Key) => {
       </div>
       <div className={styles.buttonsGroup}>
         <Button className="flex justify-center items-center" size="md" onClick={() => {
-          onNewTaskClick(true, currentDate); 
+            const now = new Date();
+            const isToday = currentDate.toDateString() === now.toDateString();
+            const dateToSend = new Date(currentDate);
+
+            if (isToday) {
+              dateToSend.setHours(now.getHours(), now.getMinutes(), 0, 0);
+            } else {
+              dateToSend.setHours(0, 0, 0, 0); // Remove time component for non-today dates
+            }
+
+            onNewTaskClick(true, dateToSend);
+            console.log("Date to send: ", dateToSend);
         }}>New Task</Button>
       </div>
       <ScrollShadow className="w-[100%] h-[400px]" hideScrollBar>

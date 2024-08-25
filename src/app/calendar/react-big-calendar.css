@@ -879,6 +879,49 @@ button.rbc-input::-moz-focus-inner {
 .rbc-event {
   border-radius: 4px !important; 
 }
-.three-columns {
-  width: 33%;
+
+
+@media (max-width: 640px) {
+  /*
+  .rbc-time-content{
+    flex-wrap: nowrap;
+    overflow: hidden;
+    width: 100%;
+  }
+  .rbc-time-column{
+    flex: 0 0 calc((100% - (27px * 3)) / 3); 
+    max-width: calc((100% - (27px * 3)) / 3); 
+    box-sizing: border-box;
+  }
+
+  .rbc-time-header-cell {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .rbc-header-week {
+    flex: 0 0 calc(100% / 3); 
+    max-width: calc(100% / 3); 
+    box-sizing: border-box;
+  }
+  */
+  .plusIcon {
+    position: absolute;
+    right: 20px;
+  }
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: var(--header-bg);
+}
+
+.plusIcon {
+  color: var(--grey);
+  width: 20px;
+  height: auto;
+  cursor: pointer;
 }

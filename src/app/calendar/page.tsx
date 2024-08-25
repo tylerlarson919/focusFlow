@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from "react";
-import { Calendar, dateFnsLocalizer, Views, View  } from "react-big-calendar";
+import React, { useState, useEffect, useCallback, Component } from "react";
+import { Calendar, dateFnsLocalizer, Views, View } from "react-big-calendar";
 import { format } from 'date-fns';
 import parse from "date-fns/parse";
 import startOfWeek from "date-fns/startOfWeek";
@@ -17,6 +17,7 @@ import { db } from '../../../firebase.js';
 import CalendarContainer from "./CalendarContainer"; // Adjust the path as needed
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import { FaPlus } from "react-icons/fa";
 
 
 const locales = {
@@ -75,23 +76,12 @@ const MyCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [daysShown, setDaysShown] = useState(7); // Default is 7 for desktop
   const DragAndDropCalendar = withDragAndDrop<MyEvent>(Calendar);
-
-
-
-  // Fetch tasks from Firestore
-
-  useEffect(() => {
-    fetchTasks(); // Fetch tasks when component mounts
-  }, []);
-
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 640);
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth <= 768) {
-        setDaysShown(3); // Show 3 days on mobile
-      } else {
-        setDaysShown(7); // Show 7 days on desktop
-      }
+      setIsMobile(window.innerWidth <= 640);
+      setDaysShown(window.innerWidth <= 640 ? 3 : 7);
     };
   
     window.addEventListener('resize', handleResize);
@@ -99,6 +89,13 @@ const MyCalendar = () => {
   
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Fetch tasks from Firestore
+
+  useEffect(() => {
+    fetchTasks(); // Fetch tasks when component mounts
+  }, []);
+
   
   
   
@@ -193,18 +190,57 @@ const MyCalendar = () => {
   
   
   
-  
-  
-  
-  
-  
+  const roundToNearestQuarterHour = (date: Date): Date => {
+    const now = new Date();
+    const roundedDate = new Date(date);
 
-  const OpenNewTaskModal = (date: Date) => {
-    const localDateString = date.toLocaleDateString('en-US');
+    // Check if the passed date is today
+    const isToday = now.toDateString() === roundedDate.toDateString();
+
+    if (isToday) {
+        // If the date is today, set time to current time
+        roundedDate.setHours(now.getHours());
+        roundedDate.setMinutes(now.getMinutes());
+        roundedDate.setSeconds(now.getSeconds());
+        roundedDate.setMilliseconds(now.getMilliseconds());
+    } else {
+        // If the date is not today, set time to midnight
+        roundedDate.setHours(1);
+        roundedDate.setMinutes(0);
+        roundedDate.setSeconds(0);
+        roundedDate.setMilliseconds(0);
+    }
+
+    // Subtract one hour from the rounded date
+    roundedDate.setHours(roundedDate.getHours() - 1);
+
+    console.log('startDate:', roundedDate);
+  
+    return roundedDate;
+};
+
+const formatDateToISO = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+  
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const OpenNewTaskModal = (date: Date) => {
+    const roundedDate = roundToNearestQuarterHour(date);
+    const formattedDate = formatDateToISO(roundedDate); // Format as YYYY-MM-DDTHH:mm
     setSelectedTask(null);
-    setSelectedDate(localDateString);
+    setSelectedDate(formattedDate); // Store formatted date
     setIsTaskModalOpen(true);
-  };
+    console.log('formattedDate:', formattedDate);
+};
+  
+  
+  
+  
   
 
   const OpenEditTaskModal = (isClicked: boolean, task: any) => {
@@ -298,6 +334,14 @@ const MyCalendar = () => {
   
   const navigate = (direction: 'prev' | 'next') => {
     const updateDate = (date: Date) => {
+      if (window.innerWidth <= 640) {
+
+
+        return direction === 'next'
+          ? new Date(date.setDate(date.getDate() + 3)) // Move 3 days forward
+          : new Date(date.setDate(date.getDate() - 3)); // Move 3 days backward
+      }
+  
       switch (view) {
         case Views.MONTH:
           return direction === 'next'
@@ -322,6 +366,7 @@ const MyCalendar = () => {
   
     setCurrentDate(updateDate(currentDate));
   };
+  
   
 
   const handleViewChange = (newView: View) => {
@@ -349,10 +394,12 @@ const MyCalendar = () => {
   const startAccessor = (event: MyEvent) => event.start;
   const endAccessor = (event: MyEvent) => event.end;
   
-  
+
 
   return (
     <div className="h-screen flex flex-col">
+      <div className="header">
+
       <HeaderMain className="absolute bg-transparent top-0 " />
       <div className="justify-center items-center p-2 flex-col-reverse flex sm:flex-row sm:flex sm:items-center sm:justify-between sm:p-4">
         <div className="w-24"></div>
@@ -366,6 +413,9 @@ const MyCalendar = () => {
           <Button variant="light" onClick={() => navigate('next')}>&gt;</Button>
         </div>
         <div className="w-24 flex justify-center">
+        <div className="flex items-center justify-center flex-row-reverse sm:flex sm:items-center sm:gap-3 sm:justify-center sm:flex-row"> 
+        <FaPlus className="plusIcon" onClick={() => OpenNewTaskModal(currentDate)}/>
+
         <Dropdown>
           <DropdownTrigger>
             <Button variant="flat">
@@ -377,14 +427,15 @@ const MyCalendar = () => {
             onAction={(key) => handleViewChange(key as View)}
           >
             <DropdownItem key={Views.MONTH}>Month</DropdownItem>
-            <DropdownItem key={Views.WEEK}>Week</DropdownItem>
+            <DropdownItem isDisabled={isMobile} key={Views.WEEK}>Week</DropdownItem>
             <DropdownItem key={Views.DAY}>Day</DropdownItem>
             <DropdownItem key={Views.AGENDA}>Agenda</DropdownItem>
           </DropdownMenu>
         </Dropdown>
         </div>
+        </div>
       </div>
-
+      </div>
       <div className="flex-1">
       <DragAndDropCalendar
         key={events.length}
@@ -398,7 +449,6 @@ const MyCalendar = () => {
         date={currentDate} // Set the current date here
         onEventDrop={moveEvent}
         onEventResize={resizeEvent}
-
         components={{
           dateCellWrapper: (props) => (
             <CalendarContainer {...props} onAddTask={OpenNewTaskModal} />
