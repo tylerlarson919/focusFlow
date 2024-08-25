@@ -3,7 +3,12 @@
 import { Navbar, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Link } from "@nextui-org/react";
 import React, { useState } from 'react';
 
-const HeaderMain: React.FC = () => {
+
+interface HeaderMainProps {
+  className?: string;
+}
+
+const HeaderMain: React.FC<HeaderMainProps> = ({ className }) => {
   // State to manage menu open/close status
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -13,9 +18,11 @@ const HeaderMain: React.FC = () => {
     "Stats",
     "Settings",
   ];
+  
+
 
   return (
-    <div className="z-50">
+    <div className={`"z-50 ${className}`}>
       <Navbar onMenuOpenChange={setIsMenuOpen} className="z-50 flex justify-between w-full">
         <div className="z-50 flex w-full h-full items-center">
           <NavbarMenuToggle
