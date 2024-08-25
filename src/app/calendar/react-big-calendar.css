@@ -85,6 +85,7 @@ button.rbc-input::-moz-focus-inner {
   font-weight: bold;
   font-size: 90%;
   min-height: 0;
+  color: var(--text-color);
 }
 
 .rbc-rtl .rbc-header + .rbc-header {
@@ -254,7 +255,6 @@ button.rbc-input::-moz-focus-inner {
   -webkit-box-shadow: none;
           box-shadow: none;
   margin: 0;
-  background-color: inherit;
   border-radius: 5px;
   color: #fff;
   cursor: pointer;
@@ -549,6 +549,7 @@ button.rbc-input::-moz-focus-inner {
 
 .rbc-label {
   padding: 0 5px;
+  color: var(--text-color);
 }
 
 .rbc-day-slot {

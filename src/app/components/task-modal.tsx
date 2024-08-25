@@ -39,6 +39,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
 
     const handleClose = () => {
         setShowColorPicker(false);
+        setEndDate('');
         onClose();
     };
 
@@ -47,17 +48,17 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
             if (task) {
                 // Populate the modal with the selected task's data
                 setDate(task.date || null);
-                setEndDate(task.endDate || '');
+                setEndDate(task.endDate || task.date || '');
                 setName(task.name || '');
                 setDescription(task.description || '');
-                setColor(task.color || '#007bff');
+                setColor(task.color || 'var(--blue)');
             } else {
                 // Reset the modal for a new task
                 setDate(initialDate ? formatDate(parseDateTime(convertToISODate(initialDate))) : null);
-                setEndDate('');
+                setEndDate(initialDate ? formatDate(parseDateTime(convertToISODate(initialDate))) : null);
                 setName('');
                 setDescription('');
-                setColor('#007bff');
+                setColor('var(--blue)');
             }
         }
     }, [isOpen, task, initialDate]);
@@ -66,7 +67,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
 
     const [name, setName] = useState<string>(task?.name || '');
     const [description, setDescription] = useState<string>(task?.description || '');
-    const [color, setColor] = useState<string>(task?.color || '#007bff'); // Default to blue
+    const [color, setColor] = useState<string>(task?.color || 'var(--blue)'); // Default to blue
     const [showColorPicker, setShowColorPicker] = useState(false);
 
     
@@ -148,7 +149,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
                         className={`absolute top-1 bottom-1 left-full ml-1 flex flex-row items-center justify-center shadow-lg z-50 transition-transform transition-opacity duration-300 ease-in-out ${showColorPicker ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'} origin-left`}
                         style={{ transformOrigin: 'left' }}
                     >
-                        {['#007bff', '#28a745', '#dc3545', '#ffc107', '#6c757d'].map((clr) => (
+                        {['var(--blue)', 'var(--purple)', 'var(--green)', 'var(--red)', 'var(--yellow)', 'var(--grey)'].map((clr) => (
                             <div 
                                 key={clr}
                                 className={`w-5 h-5 rounded-full m-1 cursor-pointer ${clr === color ? 'shadow-lg shadow-[0_0_5px_rgba(255,255,255,0.5)]' : ''}`}
@@ -165,8 +166,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
             </ModalHeader>
 
                 <ModalBody>
-                    <div className='flex flex-row gap-3'>
-                        <DatePicker className='w-1/2'
+                    <div className=' flex flex-colum sm:flex sm:flex-row sm:gap-3'>
+                        <DatePicker className='w-full sm:w-1/2'
                             label="Start Date"
                             granularity="minute"
                             fullWidth
@@ -176,7 +177,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
                                 <FaCalendar className="text-1xl text-default-400 pointer-events-none flex-shrink-0" />
                             }
                         />
-                        <DatePicker className='w-1/2'
+                        <DatePicker className='w-full sm:w-1/2'
                             label="End Date"
                             granularity="minute"
                             fullWidth

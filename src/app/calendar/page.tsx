@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Calendar, dateFnsLocalizer, Views, View } from "react-big-calendar";
 import format from "date-fns/format";
 import parse from "date-fns/parse";
@@ -17,6 +17,8 @@ import { doc, updateDoc, deleteDoc, getDocs, collection } from 'firebase/firesto
 import { db } from '../../../firebase.js';
 import { color } from "framer-motion";
 import CalendarContainer from "./CalendarContainer"; // Adjust the path as needed
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
 
 const locales = {
@@ -51,6 +53,7 @@ interface MyEvent {
   allDay?: boolean;
   resource?: any;
   color?: string;
+  [key: string]: any;
 }
 
 const MyCalendar = () => {
@@ -61,6 +64,8 @@ const MyCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
   const [events, setEvents] = useState<MyEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [daysShown, setDaysShown] = useState(7); // Default is 7 for desktop
+  const DragAndDropCalendar = withDragAndDrop(Calendar);
 
   // Fetch tasks from Firestore
 
@@ -68,6 +73,22 @@ const MyCalendar = () => {
     fetchTasks(); // Fetch tasks when component mounts
   }, []);
 
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) { // 768px is a common mobile breakpoint
+        setDaysShown(3); // Show 3 days on mobile
+      } else {
+        setDaysShown(7); // Show 7 days on desktop
+      }
+    };
+  
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Call initially to set the correct value on load
+  
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   
   const fetchTasks = async () => {
     try {
@@ -78,7 +99,7 @@ const MyCalendar = () => {
           title: task.name || "New Task",
           start: new Date(task.date),
           end: task.endDate ? new Date(task.endDate) : new Date(task.date),
-          color: task.color || '#007bff',
+          color: task.color || 'var(--blue)',
           resource: task,
         };
       });
@@ -88,7 +109,59 @@ const MyCalendar = () => {
     }
   };
   
+  const moveEvent = useCallback(
+    async ({ event, start, end, isAllDay: droppedOnAllDaySlot = false }: { event: MyEvent, start: Date, end: Date, isAllDay?: boolean }) => {
+      const updatedEvent = {
+        ...event,
+        start,
+        end,
+        allDay: droppedOnAllDaySlot,
+      };
   
+      try {
+        // Update Firestore with new dates
+        await updateDoc(doc(db, 'tasks', event.resource.id), {
+          date: start.toISOString(),
+          endDate: end.toISOString(),
+        });
+  
+        // Update the event in the state
+        setEvents((prevEvents) =>
+          prevEvents.map((ev) => (ev.resource.id === event.resource.id ? updatedEvent : ev))
+        );
+  
+        // Optionally, open the Task Modal with the updated task
+        setSelectedTask(updatedEvent.resource);
+        setIsTaskModalOpen(true);
+  
+      } catch (error) {
+        console.error('Error updating event:', error);
+      }
+    },
+    [setEvents]
+  );
+  
+  const resizeEvent = useCallback(
+    async ({ event, start, end }: { event: MyEvent, start: Date, end: Date }) => {
+      const updatedEvent = {
+        ...event,
+        start,
+        end,
+      };
+  
+      // Update Firestore with new dates
+      await updateDoc(doc(db, 'tasks', event.resource.id), {
+        date: start.toISOString(),
+        endDate: end.toISOString(),
+      });
+  
+      // Update the event in the state
+      setEvents((prevEvents) =>
+        prevEvents.map((ev) => (ev.resource.id === event.resource.id ? updatedEvent : ev))
+      );
+    },
+    [setEvents]
+  );
 
   const OpenNewTaskModal = (date: Date) => {
     const localDateString = date.toLocaleDateString('en-US');
@@ -115,7 +188,7 @@ const MyCalendar = () => {
   const MonthEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
     <div
       style={{ 
-        backgroundColor: event.color || '#007bff',
+        backgroundColor: event.color || 'var(--blue)', // Dynamically set color
         paddingTop: '0px',
         paddingBottom: '0px',
         fontSize: '12px',
@@ -131,21 +204,23 @@ const MyCalendar = () => {
   );
   
   
+  
   const WeekDayEvent: React.FC<{ event: MyEvent }> = ({ event }) => {
+    // Inline style to apply to existing rbc-event class
     const eventStyle = {
-      backgroundColor: event.color || '#007bff', // Use the dynamic color
+      backgroundColor: event.color || 'var(--blue)' + ' !important',
       paddingTop: '3px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: '0px',
+      borderRadius: '4px',
       color: 'white',
       whiteSpace: 'nowrap',
     };
   
     return (
-      <div className="rbc-event" style={eventStyle}>
-        <div className="rbc-event-content" style={{ padding: '2px 4px' }}>
+      <div className="rbc-event-content" style={eventStyle}>
+        <div className="rbc-event-content">
           {event.title}
         </div>
       </div>
@@ -154,14 +229,15 @@ const MyCalendar = () => {
   
   
   
+  
   const DayEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
     <div
       style={{ 
-        backgroundColor: event.color || '#007bff',
+        backgroundColor: event.color || 'var(--blue)',
         paddingTop: '4px',
-        paddingBottom: '0px',
+        marginBottom: '40px',
       }}
-      className="rbc-event rbc-event-day"
+      className="rbc-event rbc-event-day rbc-event-content"
     >
       <div className="rbc-event-content">
         {event.title}
@@ -172,11 +248,11 @@ const MyCalendar = () => {
   const AgendaEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
     <div
       style={{ 
-        backgroundColor: event.color || '#007bff',
+        backgroundColor: event.color || 'var(--blue)',
         paddingTop: '0px',
         paddingBottom: '0px',
       }}
-      className="rbc-event rbc-event-agenda"
+      className="rbc-event rbc-event-agenda rbc-event-content"
     >
       <div className="rbc-event-content">
         {event.title}
@@ -281,6 +357,9 @@ const MyCalendar = () => {
         view={view}
         onView={(newView) => setView(newView)}
         date={currentDate} // Set the current date here
+        onEventDrop={moveEvent}
+        onEventResize={resizeEvent}
+
         components={{
           dateCellWrapper: (props) => (
             <CalendarContainer {...props} onAddTask={OpenNewTaskModal} />
