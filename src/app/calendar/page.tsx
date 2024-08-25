@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Calendar, dateFnsLocalizer, Views, View  } from "react-big-calendar";
-import format from "date-fns/format";
+import { format } from 'date-fns';
 import parse from "date-fns/parse";
 import startOfWeek from "date-fns/startOfWeek";
 import getDay from "date-fns/getDay";
@@ -22,6 +22,17 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 const locales = {
   "en-US": enUS,
 };
+
+type EventInteractionArgs<T> = {
+  event: T;
+  start: Date | string; // Allow string or Date
+  end: Date | string;   // Allow string or Date
+  isAllDay?: boolean;
+};
+
+
+
+
 
 const localizer = dateFnsLocalizer({
   format,
@@ -63,7 +74,9 @@ const MyCalendar = () => {
   const [events, setEvents] = useState<MyEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [daysShown, setDaysShown] = useState(7); // Default is 7 for desktop
-  const DragAndDropCalendar = withDragAndDrop(Calendar);
+  const DragAndDropCalendar = withDragAndDrop<MyEvent>(Calendar);
+
+
 
   // Fetch tasks from Firestore
 
@@ -109,58 +122,82 @@ const MyCalendar = () => {
   };
   
   const moveEvent = useCallback(
-    async ({ event, start, end, isAllDay: droppedOnAllDaySlot = false }: { event: MyEvent, start: Date, end: Date, isAllDay?: boolean }) => {
-      const updatedEvent = {
+    ({ event, start, end, isAllDay }: EventInteractionArgs<MyEvent>): void => {
+      const startDate = typeof start === 'string' ? new Date(start) : start;
+      const endDate = typeof end === 'string' ? new Date(end) : end;
+  
+      const updatedEvent: MyEvent = {
         ...event,
-        start,
-        end,
-        allDay: droppedOnAllDaySlot,
+        start: startDate,
+        end: endDate,
+        allDay: isAllDay,
       };
   
-      try {
-        // Update Firestore with new dates
-        await updateDoc(doc(db, 'tasks', event.resource.id), {
-          date: start.toISOString(),
-          endDate: end.toISOString(),
-        });
+      // Format dates for Firestore
+      const formattedStart = format(startDate, "yyyy-MM-dd'T'HH:mm");
+      const formattedEnd = format(endDate, "yyyy-MM-dd'T'HH:mm");
   
-        // Update the event in the state
+      // Update Firestore with formatted dates
+      updateDoc(doc(db, 'tasks', event.resource.id), {
+        date: formattedStart,
+        endDate: formattedEnd,
+      }).then(() => {
+        // Update event in state
         setEvents((prevEvents) =>
           prevEvents.map((ev) => (ev.resource.id === event.resource.id ? updatedEvent : ev))
         );
   
-        // Optionally, open the Task Modal with the updated task
+        // Optionally open the Task Modal
         setSelectedTask(updatedEvent.resource);
         setIsTaskModalOpen(true);
-  
-      } catch (error) {
+      }).catch((error) => {
         console.error('Error updating event:', error);
-      }
+      });
     },
     [setEvents]
   );
   
   const resizeEvent = useCallback(
-    async ({ event, start, end }: { event: MyEvent, start: Date, end: Date }) => {
-      const updatedEvent = {
+    ({ event, start, end }: EventInteractionArgs<MyEvent>): void => {
+      const startDate = typeof start === 'string' ? new Date(start) : start;
+      const endDate = typeof end === 'string' ? new Date(end) : end;
+  
+      const updatedEvent: MyEvent = {
         ...event,
-        start,
-        end,
+        start: startDate,
+        end: endDate,
       };
   
-      // Update Firestore with new dates
-      await updateDoc(doc(db, 'tasks', event.resource.id), {
-        date: start.toISOString(),
-        endDate: end.toISOString(),
-      });
+      // Format dates for Firestore
+      const formattedStart = format(startDate, "yyyy-MM-dd'T'HH:mm");
+      const formattedEnd = format(endDate, "yyyy-MM-dd'T'HH:mm");
   
-      // Update the event in the state
-      setEvents((prevEvents) =>
-        prevEvents.map((ev) => (ev.resource.id === event.resource.id ? updatedEvent : ev))
-      );
+      // Update Firestore with formatted dates
+      updateDoc(doc(db, 'tasks', event.resource.id), {
+        date: formattedStart,
+        endDate: formattedEnd,
+      }).then(() => {
+        // Update event in state
+        setEvents((prevEvents) =>
+          prevEvents.map((ev) => (ev.resource.id === event.resource.id ? updatedEvent : ev))
+        );
+      }).catch((error) => {
+        console.error('Error updating event:', error);
+      });
     },
     [setEvents]
   );
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
   const OpenNewTaskModal = (date: Date) => {
     const localDateString = date.toLocaleDateString('en-US');
@@ -309,7 +346,9 @@ const MyCalendar = () => {
     setCurrentDate(resetDate());
   };
   
-
+  const startAccessor = (event: MyEvent) => event.start;
+  const endAccessor = (event: MyEvent) => event.end;
+  
   
 
   return (
@@ -347,16 +386,18 @@ const MyCalendar = () => {
       </div>
 
       <div className="flex-1">
-      <Calendar
+      <DragAndDropCalendar
         key={events.length}
         localizer={localizer}
         events={events}
-        startAccessor="start"
-        endAccessor="end"
+        startAccessor={startAccessor}
+        endAccessor={endAccessor}
         views={['month', 'week', 'day', 'agenda']}
         view={view}
         onView={(newView) => setView(newView)}
         date={currentDate} // Set the current date here
+        onEventDrop={moveEvent}
+        onEventResize={resizeEvent}
 
         components={{
           dateCellWrapper: (props) => (
@@ -369,7 +410,7 @@ const MyCalendar = () => {
               case Views.MONTH:
                 return <MonthEvent {...props} />;
               case Views.WEEK:
-                return <WeekDayEvent {...props} />; // Use the dynamic event component
+                return <WeekDayEvent {...props} />; 
               case Views.DAY:
                 return <DayEvent {...props} />;
               case Views.AGENDA:
@@ -381,6 +422,7 @@ const MyCalendar = () => {
         }}
         style={{ height: "100%" }}
         onSelectEvent={handleSelectEvent}
+        
       />
 
       </div>
