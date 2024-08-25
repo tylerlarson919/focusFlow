@@ -74,21 +74,9 @@ const MyCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
   const [events, setEvents] = useState<MyEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [daysShown, setDaysShown] = useState(7); // Default is 7 for desktop
   const DragAndDropCalendar = withDragAndDrop<MyEvent>(Calendar);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 640);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 640);
-      setDaysShown(window.innerWidth <= 640 ? 3 : 7);
-    };
-  
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Call initially to set the correct value on load
-  
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+
 
   // Fetch tasks from Firestore
 
@@ -427,7 +415,7 @@ const OpenNewTaskModal = (date: Date) => {
             onAction={(key) => handleViewChange(key as View)}
           >
             <DropdownItem key={Views.MONTH}>Month</DropdownItem>
-            <DropdownItem isDisabled={isMobile} key={Views.WEEK}>Week</DropdownItem>
+            <DropdownItem key={Views.WEEK}>Week</DropdownItem>
             <DropdownItem key={Views.DAY}>Day</DropdownItem>
             <DropdownItem key={Views.AGENDA}>Agenda</DropdownItem>
           </DropdownMenu>
