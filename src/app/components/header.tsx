@@ -23,7 +23,7 @@ const HeaderMain: React.FC<HeaderMainProps> = ({ className }) => {
 
   return (
     <div className={`"z-50 ${className}`}>
-      <Navbar onMenuOpenChange={setIsMenuOpen} className="z-50 flex justify-between w-full">
+      <Navbar onMenuOpenChange={setIsMenuOpen} className="backdrop-blur-none bg-transparent z-50 flex justify-between w-full">
         <div className="z-50 flex w-full h-full items-center">
           <NavbarMenuToggle
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}

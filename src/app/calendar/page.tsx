@@ -388,7 +388,7 @@ const OpenNewTaskModal = (date: Date) => {
     <div className="h-screen flex flex-col">
       <div className="header">
 
-      <HeaderMain className="absolute bg-transparent top-0 " />
+      <HeaderMain className="absolute top-0 " />
       <div className="justify-center items-center p-2 flex-col-reverse flex sm:flex-row sm:flex sm:items-center sm:justify-between sm:p-4">
         <div className="w-24"></div>
         <div className="flex justify-center items-center gap-6 flex-1 text-center">
