@@ -357,8 +357,6 @@ const MyCalendar = () => {
         view={view}
         onView={(newView) => setView(newView)}
         date={currentDate} // Set the current date here
-        onEventDrop={moveEvent}
-        onEventResize={resizeEvent}
 
         components={{
           dateCellWrapper: (props) => (
