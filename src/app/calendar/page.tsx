@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Calendar, dateFnsLocalizer, Views, View } from "react-big-calendar";
+import { Calendar, dateFnsLocalizer, Views, View  } from "react-big-calendar";
 import format from "date-fns/format";
 import parse from "date-fns/parse";
 import startOfWeek from "date-fns/startOfWeek";
@@ -12,10 +12,8 @@ import { Button, ButtonGroup, DropdownMenu, Dropdown, DropdownTrigger, DropdownI
 import "./react-big-calendar.css";
 import CustomToolbar from "./custom-toolbar";
 import TaskModal from "../components/task-modal";
-import CustomDateCellWrapper from "./custom-date-cell";
 import { doc, updateDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
 import { db } from '../../../firebase.js';
-import { color } from "framer-motion";
 import CalendarContainer from "./CalendarContainer"; // Adjust the path as needed
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
@@ -76,7 +74,7 @@ const MyCalendar = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth <= 768) { // 768px is a common mobile breakpoint
+      if (window.innerWidth <= 768) {
         setDaysShown(3); // Show 3 days on mobile
       } else {
         setDaysShown(7); // Show 7 days on desktop
@@ -88,6 +86,7 @@ const MyCalendar = () => {
   
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+  
   
   
   const fetchTasks = async () => {
@@ -311,6 +310,7 @@ const MyCalendar = () => {
   };
   
 
+  
 
   return (
     <div className="h-screen flex flex-col">
@@ -322,7 +322,7 @@ const MyCalendar = () => {
           <h2 className="text-lg font-bold">
             {view === Views.MONTH && localizer.format(currentDate, "MMMM yyyy")}
             {view === Views.WEEK && `Week of ${localizer.format(currentDate, "MMM d, yyyy")}`}
-            {(view === Views.DAY || view === Views.AGENDA) && localizer.format(currentDate, "MMM d, yyyy")}
+            {(view === Views.DAY || view === Views.AGENDA) && localizer.format(currentDate, " EEE, MMM d")}
           </h2>
           <Button variant="light" onClick={() => navigate('next')}>&gt;</Button>
         </div>
@@ -384,7 +384,7 @@ const MyCalendar = () => {
       />
 
       </div>
-      <TaskModal
+      <TaskModal 
         isOpen={isTaskModalOpen}
         onClose={() => { 
           setIsTaskModalOpen(false);

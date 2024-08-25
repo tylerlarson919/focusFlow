@@ -118,8 +118,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
 
 
     return (
-        <Modal size="4xl" isOpen={isOpen} onOpenChange={handleClose}>
-            <ModalContent>
+        <Modal placement='center' isDismissable={false} isKeyboardDismissDisabled={false} size="4xl" isOpen={isOpen} onOpenChange={handleClose}>
+            <ModalContent className="">
             <ModalHeader className="items-center flex flex-row gap-3 text-3xl">
                 {task && (
                     <FaTrash
@@ -165,8 +165,15 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
 
             </ModalHeader>
 
-                <ModalBody>
-                    <div className=' flex flex-colum sm:flex sm:flex-row sm:gap-3'>
+                <ModalBody className='w-full'>
+                    <Textarea
+                            label="Name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            fullWidth
+                            minRows={1}
+                    />
+                    <div className='flex flex-col w-full gap-3 sm:flex sm:flex-row sm:gap-3'>
                         <DatePicker className='w-full sm:w-1/2'
                             label="Start Date"
                             granularity="minute"
@@ -188,13 +195,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
                             }
                         />
                     </div>
-                    <Input
-                        label="Name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        fullWidth
-
-                    />
                     <Textarea
                         label="Description"
                         value={description}

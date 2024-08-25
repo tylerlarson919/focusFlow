@@ -879,3 +879,6 @@ button.rbc-input::-moz-focus-inner {
 .rbc-event {
   border-radius: 4px !important; 
 }
+.three-columns {
+  width: 33%;
+}
