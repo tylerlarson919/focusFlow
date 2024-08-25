@@ -57,7 +57,6 @@ button.rbc-input::-moz-focus-inner {
 .rbc-ellipsis, .rbc-show-more, .rbc-row-segment .rbc-event-content, .rbc-event-label {
   display: block;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -86,14 +85,10 @@ button.rbc-input::-moz-focus-inner {
   font-weight: bold;
   font-size: 90%;
   min-height: 0;
-  border-bottom: 1px solid var(--calendar-lines);
 }
-.rbc-header + .rbc-header {
-  border-left: 1px solid var(--calendar-lines);
-}
+
 .rbc-rtl .rbc-header + .rbc-header {
   border-left-width: 0;
-  border-right: 1px solid var(--calendar-lines);
 }
 .rbc-header > a, .rbc-header > a:active, .rbc-header > a:visited {
   color: inherit;
@@ -146,7 +141,7 @@ button.rbc-input::-moz-focus-inner {
 }
 
 .rbc-today {
-  background-color: var(--dark3);
+  background-color: var(--dark2);
 }
 
 .rbc-toolbar {
@@ -598,7 +593,9 @@ button.rbc-input::-moz-focus-inner {
   width: auto;
 }
 
-
+.rbc-event-label {
+  display: none;
+}
 
 .rbc-day-slot .rbc-event-content {
   width: 100%;
@@ -647,6 +644,7 @@ button.rbc-input::-moz-focus-inner {
   -ms-flex-preferred-size: 0 px;
       flex-basis: 0 px;
 }
+
 
 .rbc-time-header-content + .rbc-time-header-content {
   margin-left: -1px;
@@ -760,7 +758,6 @@ button.rbc-input::-moz-focus-inner {
   -webkit-box-direction: normal;
       -ms-flex-direction: column;
           flex-direction: column;
-  border-left: 1px solid var(--calendar-lines);
 }
 .rbc-rtl .rbc-time-header-content {
   border-left-width: 0;
@@ -783,7 +780,7 @@ button.rbc-input::-moz-focus-inner {
       -ms-flex-align: start;
           align-items: flex-start;
   width: 100%;
-  border-top: 2px solid var(--calendar-lines);
+  border-top: 1px solid var(--calendar-lines);
   overflow-y: auto;
   position: relative;
 }
@@ -792,9 +789,7 @@ button.rbc-input::-moz-focus-inner {
       -ms-flex: none;
           flex: none;
 }
-.rbc-time-content > * + * > * {
-  border-left: 1px solid var(--calendar-lines);
-}
+
 .rbc-rtl .rbc-time-content > * + * > * {
   border-left-width: 0;
   border-right: 1px solid var(--calendar-lines);
@@ -816,5 +811,9 @@ button.rbc-input::-moz-focus-inner {
   background-color: #74ad31;
   pointer-events: none;
 }
+.rbc-allday-cell {
+  display: none;
+}
 
-/*# sourceMappingURL=react-big-calendar.css.map */
+
+

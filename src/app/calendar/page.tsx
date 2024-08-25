@@ -12,9 +12,12 @@ import { Button, ButtonGroup, DropdownMenu, Dropdown, DropdownTrigger, DropdownI
 import "./react-big-calendar.css";
 import CustomToolbar from "./custom-toolbar";
 import TaskModal from "../components/task-modal";
+import CustomDateCellWrapper from "./custom-date-cell";
 import { doc, updateDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
 import { db } from '../../../firebase.js';
 import { color } from "framer-motion";
+import CalendarContainer from "./CalendarContainer"; // Adjust the path as needed
+
 
 const locales = {
   "en-US": enUS,
@@ -87,14 +90,13 @@ const MyCalendar = () => {
   
   
 
-  const OpenNewTaskModal = (isClicked: boolean, date: Date) => {
-    if (isClicked) {
-      const localDateString = date.toLocaleDateString('en-US');
-      setSelectedTask(null);
-      setSelectedDate(localDateString);
-      setIsTaskModalOpen(true);
-    }
+  const OpenNewTaskModal = (date: Date) => {
+    const localDateString = date.toLocaleDateString('en-US');
+    setSelectedTask(null);
+    setSelectedDate(localDateString);
+    setIsTaskModalOpen(true);
   };
+  
 
   const OpenEditTaskModal = (isClicked: boolean, task: any) => {
     if (isClicked) {
@@ -116,14 +118,18 @@ const MyCalendar = () => {
         backgroundColor: event.color || '#007bff',
         paddingTop: '0px',
         paddingBottom: '0px',
+        fontSize: '12px',
+        position: 'relative',
+        zIndex: 1000, // Set high z-index
       }}
       className="rbc-event"
     >
-      <div className="rbc-event-content">
+      <div className="rbc-event-content" style={{ zIndex: 1000 }}>
         {event.title}
       </div>
     </div>
   );
+  
   
   const WeekDayEvent: React.FC<{ event: MyEvent }> = ({ event }) => {
     const eventStyle = {
@@ -275,6 +281,10 @@ const MyCalendar = () => {
         onView={(newView) => setView(newView)}
         date={currentDate} // Set the current date here
         components={{
+          dateCellWrapper: (props) => (
+            <CalendarContainer {...props} onAddTask={OpenNewTaskModal} />
+          ),
+
           toolbar: CustomToolbar,
           event: (props) => {
             switch (view) {
@@ -302,7 +312,7 @@ const MyCalendar = () => {
           setIsTaskModalOpen(false);
           fetchTasks(); // Refresh tasks on modal close
         }}
-        onNewTaskClick={OpenNewTaskModal}
+        onNewTaskClick={() => {}} 
         onSave={async () => { 
           await fetchTasks(); // Refresh tasks on save
         }}

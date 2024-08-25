@@ -104,13 +104,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
             }
         }
     };
-    
-    
-    
-    
-    
 
-    
     
     const handleDateChange = (newDate: CalendarDateTime, type: 'start' | 'end') => {
         const formattedDate = formatDate(newDate);
@@ -120,9 +114,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
             setEndDate(formattedDate);
         }
     };
-    
-
-    
 
 
     return (
@@ -171,12 +162,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
                     </div>
                 </div>
 
-
-
             </ModalHeader>
-
-
-
 
                 <ModalBody>
                     <div className='flex flex-row gap-3'>
