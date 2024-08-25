@@ -134,12 +134,13 @@ const MyCalendar = () => {
   const WeekDayEvent: React.FC<{ event: MyEvent }> = ({ event }) => {
     const eventStyle = {
       backgroundColor: event.color || '#007bff', // Use the dynamic color
-      padding: '0px',
+      paddingTop: '3px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: '4px',
+      borderRadius: '0px',
       color: 'white',
+      whiteSpace: 'nowrap',
     };
   
     return (
@@ -157,7 +158,7 @@ const MyCalendar = () => {
     <div
       style={{ 
         backgroundColor: event.color || '#007bff',
-        paddingTop: '0px',
+        paddingTop: '4px',
         paddingBottom: '0px',
       }}
       className="rbc-event rbc-event-day"

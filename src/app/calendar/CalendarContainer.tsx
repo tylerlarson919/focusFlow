@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import CustomDateCellWrapper from "./custom-date-cell";
 import { DateCellWrapperProps } from "react-big-calendar";
 
@@ -11,25 +11,11 @@ const CalendarContainer: React.FC<CalendarContainerProps> = ({
   onAddTask,
   ...props
 }) => {
-  const [hoveredCellId, setHoveredCellId] = useState<string | null>(null);
-
-  const handleMouseEnter = (date: Date) => {
-    setHoveredCellId(date.toISOString());
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredCellId(null);
-  };
-
   return (
     <CustomDateCellWrapper
-      value={value}
+      date={value}
       onAddTask={onAddTask}
-      isHovered={hoveredCellId === value.toISOString()}
-      onHover={() => handleMouseEnter(value)}
-      onLeave={handleMouseLeave}
-      range={[]} // Replace with actual range if needed
-      children={props.children} // Pass children if needed
+      {...props}
     />
   );
 };

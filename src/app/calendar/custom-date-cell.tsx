@@ -1,82 +1,34 @@
 import React from "react";
-import { DateCellWrapperProps } from "react-big-calendar";
-import { AiOutlinePlus } from "react-icons/ai";
+import { FaPlus } from "react-icons/fa6";
 
-interface CustomDateCellWrapperProps extends DateCellWrapperProps {
+
+interface CustomDateCellWrapperProps {
+  date: Date; // Required prop
   onAddTask: (date: Date) => void;
-  isHovered: boolean;
-  onHover: () => void;
-  onLeave: () => void;
 }
 
 const CustomDateCellWrapper: React.FC<CustomDateCellWrapperProps> = ({
-  value,
-  children,
+  date,
   onAddTask,
-  isHovered,
-  onHover,
-  onLeave,
 }) => {
+  const handleClick = () => {
+    onAddTask(date);
+  };
 
-  const isToday = (date: Date) => {
     const today = new Date();
-    return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    );
-  };
-
-  const handleMouseEnter = () => onHover();
-  const handleMouseLeave = () => onLeave();
-
-  const handleAddTaskClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onAddTask(value);
-  };
+    const isToday = date.toDateString() === today.toDateString();
 
   return (
-    <div
-      className={`rbc-day-bg ${
-        isToday(value) ? "bg-blue-100 rounded-full border border-blue-500" : ""
-      }`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      style={{ position: "relative" }}
-    >
-      {children}
-
-
-
-      {/* Plus Button */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 10, // Ensure it’s on top of other elements
-          pointerEvents: "auto", // Make sure button can be clicked
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+    <div className="relative h-full p-2 w-full custom-border-left">
+        {isToday && (
+        <div className="current-day-circle"></div>
+      )}
+      <button
+        onClick={handleClick}
+        className="custom-add-task-button"
       >
-        {isHovered && (
-          <button
-            className="absolute top-1 left-1 text-gray-500"
-            onClick={handleAddTaskClick}
-            style={{
-              borderRadius: "50%",
-              padding: "0.5rem",
-              zIndex: 1000, // Ensure it's above everything
-            }}
-          >
-            <AiOutlinePlus />
-          </button>
-        )}
-      </div>
+        <FaPlus className="plus-icon"/>
+      </button>
     </div>
   );
 };
