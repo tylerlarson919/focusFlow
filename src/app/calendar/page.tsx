@@ -200,7 +200,7 @@ const MyCalendar = () => {
     }
 
     // Subtract one hour from the rounded date
-    roundedDate.setHours(roundedDate.getHours() - 1);
+    roundedDate.setHours(roundedDate.getHours() );
 
     console.log('startDate:', roundedDate);
   
