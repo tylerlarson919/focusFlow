@@ -925,3 +925,12 @@ button.rbc-input::-moz-focus-inner {
   height: auto;
   cursor: pointer;
 }
+.rbc-week-event {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+.rbc-time-header {
+  position: sticky;
+  top: 74px;
+  z-index: 20;
+}

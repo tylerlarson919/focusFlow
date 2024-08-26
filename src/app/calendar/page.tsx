@@ -12,7 +12,7 @@ import { Button, ButtonGroup, DropdownMenu, Dropdown, DropdownTrigger, DropdownI
 import "./react-big-calendar.css";
 import CustomToolbar from "./custom-toolbar";
 import TaskModal from "../components/task-modal";
-import { doc, updateDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, getDocs, collection, addDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../../firebase.js';
 import CalendarContainer from "./CalendarContainer"; // Adjust the path as needed
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
@@ -75,16 +75,31 @@ const MyCalendar = () => {
   const [events, setEvents] = useState<MyEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const DragAndDropCalendar = withDragAndDrop<MyEvent>(Calendar);
-
+  const [isAltPressed, setIsAltPressed] = useState(false);
 
 
   // Fetch tasks from Firestore
 
-  useEffect(() => {
-    fetchTasks(); // Fetch tasks when component mounts
-  }, []);
 
+  useEffect(() => {
+    fetchTasks();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey) setIsAltPressed(true);
+    };
   
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (!event.altKey) setIsAltPressed(false);
+    };
+  
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+  
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+    
+  }, []);
   
   
   const fetchTasks = async () => {
@@ -107,7 +122,7 @@ const MyCalendar = () => {
   };
   
   const moveEvent = useCallback(
-    ({ event, start, end, isAllDay }: EventInteractionArgs<MyEvent>): void => {
+    async ({ event, start, end, isAllDay }: EventInteractionArgs<MyEvent>): Promise<void> => {
       const startDate = typeof start === 'string' ? new Date(start) : start;
       const endDate = typeof end === 'string' ? new Date(end) : end;
   
@@ -122,25 +137,53 @@ const MyCalendar = () => {
       const formattedStart = format(startDate, "yyyy-MM-dd'T'HH:mm");
       const formattedEnd = format(endDate, "yyyy-MM-dd'T'HH:mm");
   
-      // Update Firestore with formatted dates
-      updateDoc(doc(db, 'tasks', event.resource.id), {
-        date: formattedStart,
-        endDate: formattedEnd,
-      }).then(() => {
-        // Update event in state
-        setEvents((prevEvents) =>
-          prevEvents.map((ev) => (ev.resource.id === event.resource.id ? updatedEvent : ev))
-        );
+      if (isAltPressed) {
+        // Generate a new ID for the duplicated event
+        const newId = Date.now().toString();
   
-        // Optionally open the Task Modal
-        setSelectedTask(updatedEvent.resource);
-        setIsTaskModalOpen(true);
-      }).catch((error) => {
-        console.error('Error updating event:', error);
-      });
+        try {
+          // Add duplicated event to Firestore with the new ID
+          await setDoc(doc(db, 'tasks', newId), {
+            ...updatedEvent.resource,
+            date: formattedStart,
+            endDate: formattedEnd,
+          });
+  
+          // Add duplicated event to state
+          setEvents((prevEvents) => [
+            ...prevEvents,
+            {
+              ...updatedEvent,
+              resource: { ...updatedEvent.resource, id: newId }
+            }
+          ]);
+        } catch (error) {
+          console.error('Error duplicating event:', error);
+        }
+      } else {
+        try {
+          // Update the existing event in Firestore
+          await updateDoc(doc(db, 'tasks', event.resource.id), {
+            date: formattedStart,
+            endDate: formattedEnd,
+          });
+  
+          // Update event in state
+          setEvents((prevEvents) =>
+            prevEvents.map((ev) =>
+              ev.resource.id === event.resource.id ? updatedEvent : ev
+            )
+          );
+        } catch (error) {
+          console.error('Error updating event:', error);
+        }
+      }
     },
-    [setEvents]
+    [isAltPressed, setEvents]
   );
+  
+  
+  
   
   const resizeEvent = useCallback(
     ({ event, start, end }: EventInteractionArgs<MyEvent>): void => {
@@ -279,7 +322,7 @@ const OpenNewTaskModal = (date: Date) => {
     };
   
     return (
-      <div className="rbc-event-content" style={eventStyle}>
+      <div className="rbc-event-content rbc-week-event" style={eventStyle}>
         <div className="rbc-event-content">
           {event.title}
         </div>
@@ -297,7 +340,7 @@ const OpenNewTaskModal = (date: Date) => {
         paddingTop: '4px',
         marginBottom: '40px',
       }}
-      className="rbc-event rbc-event-day rbc-event-content"
+      className="rbc-event rbc-event-day rbc-event-content rbc-week-event"
     >
       <div className="rbc-event-content">
         {event.title}
@@ -326,8 +369,8 @@ const OpenNewTaskModal = (date: Date) => {
 
 
         return direction === 'next'
-          ? new Date(date.setDate(date.getDate() + 3)) // Move 3 days forward
-          : new Date(date.setDate(date.getDate() - 3)); // Move 3 days backward
+          ? new Date(date.setDate(date.getDate() + 1)) // Move 1 days forward
+          : new Date(date.setDate(date.getDate() - 1)); // Move 1 days backward
       }
   
       switch (view) {
