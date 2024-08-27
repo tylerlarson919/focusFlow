@@ -509,7 +509,7 @@ const handleResume = () => {
       <audio ref={audioRef} src="/alarm.mp3" />
 
 
-      <Modal size="xl" isOpen={isOpen} onClose={() => setIsOpen(false)}>
+      <Modal placement='center' size="xl" isOpen={isOpen} onClose={() => setIsOpen(false)}>
         <ModalContent className={styles.modalContent}>
           <ModalHeader className="text-center text-xl font-bold">Choose Plant</ModalHeader>
           <ModalBody className="p-5">

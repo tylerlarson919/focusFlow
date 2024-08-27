@@ -106,7 +106,7 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
         task={selectedTask}   // Add this line to pass the selected session
       />
 
-      <Modal size="4xl" isOpen={isOpen} onOpenChange={onOpenChange}>
+      <Modal placement='center' size="4xl" isOpen={isOpen} onOpenChange={onOpenChange}>
       <ModalContent>
         {(onClose) => {
           const handleSave = async () => {

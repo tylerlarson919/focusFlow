@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Component } from "react";
+import React, { useState, useEffect, useCallback, Component, useRef } from "react";
 import { Calendar, dateFnsLocalizer, Views, View } from "react-big-calendar";
+import { useDrag, useDrop } from 'react-dnd';
 import { format } from 'date-fns';
 import parse from "date-fns/parse";
 import startOfWeek from "date-fns/startOfWeek";
@@ -78,6 +79,7 @@ const MyCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const DragAndDropCalendar = withDragAndDrop<MyEvent>(Calendar);
   const [isAltPressed, setIsAltPressed] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
 
   // Fetch tasks from Firestore
@@ -124,7 +126,6 @@ const MyCalendar = () => {
       console.error('Error fetching tasks:', error);
     }
   };
-  
   const moveEvent = useCallback(
     async ({ event, start, end, isAllDay }: EventInteractionArgs<MyEvent>): Promise<void> => {
       const startDate = typeof start === 'string' ? new Date(start) : start;
@@ -149,6 +150,7 @@ const MyCalendar = () => {
           // Add duplicated event to Firestore with the new ID
           await setDoc(doc(db, 'tasks', newId), {
             ...updatedEvent.resource,
+            id: newId, // Ensure new ID is set
             date: formattedStart,
             endDate: formattedEnd,
           });
@@ -185,6 +187,7 @@ const MyCalendar = () => {
     },
     [isAltPressed, setEvents]
   );
+  
   
   
   
@@ -308,7 +311,7 @@ const OpenNewTaskModal = (date: Date) => {
         paddingBottom: '0px',
         position: 'relative', // Added for overlay positioning
       }}
-      className="rbc-event"
+      className="rbc-event event-container"
     >
       {event.status === 'Completed' && (
         <div
@@ -363,7 +366,7 @@ const OpenNewTaskModal = (date: Date) => {
   
   
     return (
-      <div className="rbc-event-content rbc-week-event" style={eventStyle}>
+      <div className="rbc-event-content rbc-week-event event-container" style={eventStyle}>
         {event.status === 'Completed' && <div style={overlayStyle} />}
         <div className="rbc-event-content">
           <div className="rbc-event-items">
@@ -394,7 +397,7 @@ const OpenNewTaskModal = (date: Date) => {
           marginBottom: '40px',
           position: 'relative', // Added for overlay positioning
         }}
-        className="rbc-event rbc-event-day rbc-event-content rbc-week-event"
+        className="rbc-event rbc-event-day rbc-event-content rbc-week-event event-container"
       >
         {event.status === 'Completed' && (
           <div
@@ -409,11 +412,11 @@ const OpenNewTaskModal = (date: Date) => {
             }}
           />
         )}
-        <div className="rbc-event-content">
+        <div className="rbc-event-content ">
           <div className="rbc-event-items">
             {event.title}
             <div className="rbc-length-display">
-              {lengthText}
+              {lengthText}react
             </div>
           </div>
         </div>
@@ -432,7 +435,7 @@ const OpenNewTaskModal = (date: Date) => {
         paddingBottom: '0px',
         position: 'relative', // Added for overlay positioning
       }}
-      className="rbc-event rbc-event-agenda rbc-event-content"
+      className="rbc-event rbc-event-agenda rbc-event-content event-container"
     >
       {event.status === 'Completed' && (
         <div
