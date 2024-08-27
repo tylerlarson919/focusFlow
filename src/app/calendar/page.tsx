@@ -53,6 +53,7 @@ interface Task {
   name?: string;
   description?: string;
   color?: string;
+  status: 'Completed' | 'In Progress' | 'Not Started';
 
 }
 
@@ -64,6 +65,7 @@ interface MyEvent {
   resource?: any;
   color?: string;
   [key: string]: any;
+  status: 'Completed' | 'In Progress' | 'Not Started';
 }
 
 const MyCalendar = () => {
@@ -113,6 +115,8 @@ const MyCalendar = () => {
           end: task.endDate ? new Date(task.endDate) : new Date(task.date),
           color: task.color || 'var(--blue)',
           resource: task,
+          status: task.status,
+
         };
       });
       setEvents(tasksData);
@@ -286,7 +290,15 @@ const OpenNewTaskModal = (date: Date) => {
     OpenEditTaskModal(true, event.resource);
   };
 
-
+  const formatLength = (start: Date, end: Date): string => {
+    const ms = end.getTime() - start.getTime();
+    const totalMinutes = Math.floor(ms / 60000);
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+  
+    return `${days ? `${days}d ` : ''}${hours ? `${hours}h ` : ''}${minutes ? `${minutes}m` : ''}`.trim();
+  };
   
   const MonthEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
     <div
@@ -294,13 +306,24 @@ const OpenNewTaskModal = (date: Date) => {
         backgroundColor: event.color || 'var(--blue)', // Dynamically set color
         paddingTop: '0px',
         paddingBottom: '0px',
-        fontSize: '12px',
-        position: 'relative',
-        zIndex: 1000, // Set high z-index
+        position: 'relative', // Added for overlay positioning
       }}
       className="rbc-event"
     >
-      <div className="rbc-event-content" style={{ zIndex: 1000 }}>
+      {event.status === 'Completed' && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'black',
+            opacity: 0.5,
+          }}
+        />
+      )}
+      <div className="rbc-event-content">
         {event.title}
       </div>
     </div>
@@ -308,10 +331,13 @@ const OpenNewTaskModal = (date: Date) => {
   
   
   
+  
+  
   const WeekDayEvent: React.FC<{ event: MyEvent }> = ({ event }) => {
-    // Inline style to apply to existing rbc-event class
-    const eventStyle = {
-      backgroundColor: event.color || 'var(--blue)' + ' !important',
+    const lengthText = formatLength(event.start, event.end);
+  
+    const eventStyle: React.CSSProperties = {
+      backgroundColor: event.color || 'var(--blue)',
       paddingTop: '3px',
       display: 'flex',
       alignItems: 'center',
@@ -319,12 +345,33 @@ const OpenNewTaskModal = (date: Date) => {
       borderRadius: '4px',
       color: 'white',
       whiteSpace: 'nowrap',
+      position: 'relative',
+      overflow: 'hidden',
     };
+  
+    const overlayStyle: React.CSSProperties = event.status === 'Completed'
+      ? {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'black',
+          opacity: 0.5,
+        }
+      : {};
+  
   
     return (
       <div className="rbc-event-content rbc-week-event" style={eventStyle}>
+        {event.status === 'Completed' && <div style={overlayStyle} />}
         <div className="rbc-event-content">
-          {event.title}
+          <div className="rbc-event-items">
+            {event.title}
+            <div className="rbc-length-display">
+              {lengthText}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -333,20 +380,49 @@ const OpenNewTaskModal = (date: Date) => {
   
   
   
-  const DayEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
-    <div
-      style={{ 
-        backgroundColor: event.color || 'var(--blue)',
-        paddingTop: '4px',
-        marginBottom: '40px',
-      }}
-      className="rbc-event rbc-event-day rbc-event-content rbc-week-event"
-    >
-      <div className="rbc-event-content">
-        {event.title}
+  
+  
+  
+  const DayEvent: React.FC<{ event: MyEvent }> = ({ event }) => {
+    const lengthText = formatLength(event.start, event.end);
+  
+    return (
+      <div
+        style={{ 
+          backgroundColor: event.color || 'var(--blue)',
+          paddingTop: '4px',
+          marginBottom: '40px',
+          position: 'relative', // Added for overlay positioning
+        }}
+        className="rbc-event rbc-event-day rbc-event-content rbc-week-event"
+      >
+        {event.status === 'Completed' && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'black',
+              opacity: 0.5,
+            }}
+          />
+        )}
+        <div className="rbc-event-content">
+          <div className="rbc-event-items">
+            {event.title}
+            <div className="rbc-length-display">
+              {lengthText}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+  
+
+
   
   const AgendaEvent: React.FC<{ event: MyEvent }> = ({ event }) => (
     <div
@@ -354,14 +430,29 @@ const OpenNewTaskModal = (date: Date) => {
         backgroundColor: event.color || 'var(--blue)',
         paddingTop: '0px',
         paddingBottom: '0px',
+        position: 'relative', // Added for overlay positioning
       }}
       className="rbc-event rbc-event-agenda rbc-event-content"
     >
+      {event.status === 'Completed' && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'black',
+            opacity: 0.5,
+          }}
+        />
+      )}
       <div className="rbc-event-content">
         {event.title}
       </div>
     </div>
   );
+  
   
   const navigate = (direction: 'prev' | 'next') => {
     const updateDate = (date: Date) => {

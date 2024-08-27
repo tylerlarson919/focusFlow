@@ -60,9 +60,19 @@ h3 {
   --red: #FF6258;
   --yellow: #c7d736;
   --grey: #686868;
+  --light-grey: #a7a7a7;
 
   --event-hover: radial-gradient(circle, rgba(63,94,251,1) 0%, rgba(252,70,107,1) 100%);
   --calendar-lines: #2c2c2c;
+
+  /* Calendar Colors: */
+
+  --cal-blue: #4950d4;
+  --cal-purple: #994ad4;
+  --cal-green: #2fb966;
+  --cal-red: #d65147;
+  --cal-yellow: #aab82d;
+  --cal-grey: #686868;
 }
 
 .width-100 {

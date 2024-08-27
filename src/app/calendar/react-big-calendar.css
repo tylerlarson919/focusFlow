@@ -809,10 +809,30 @@ button.rbc-input::-moz-focus-inner {
   z-index: 3;
   left: 0;
   right: 0;
-  height: 1px;
-  background-color: #74ad31;
+  height: 2px;
+  background-color: var(--purple);
   pointer-events: none;
 }
+
+.rbc-current-time-indicator::before {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: inherit;
+  border-radius: 50%;
+}
+
+.rbc-current-time-indicator::before {
+  left: -2px; /* Adjust to align the circle at the left */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+
+
+
+
 .rbc-allday-cell {
   display: none;
 }
@@ -934,3 +954,32 @@ button.rbc-input::-moz-focus-inner {
   top: 74px;
   z-index: 20;
 }
+.rbc-length-display {
+  font-size: 12px;
+  color: var(--light-grey);
+}
+
+
+
+.rbc-event-items {
+  width: 100%;
+  height: 100%;
+  white-space: normal;
+  padding-left: 4px;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.4;
+}
+
+
+
+.rbc-event-box {
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  align-items: start;
+  justify-content: start;
+}
+

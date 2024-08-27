@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, DatePicker, Textarea, Button } from '@nextui-org/react';
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, DatePicker, Textarea, Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@nextui-org/react';
 import { parseDateTime, CalendarDateTime, CalendarDate, DateValue } from "@internationalized/date";
 import { db } from '../../../firebase'; 
 import { collection, addDoc, setDoc, deleteDoc,getDoc,updateDoc, doc } from 'firebase/firestore';
 import { FaCalendar, FaTrash } from "react-icons/fa";
+import styles from './dashboard-left-top.module.css';
 
 
 interface TaskModalProps {
@@ -61,14 +62,14 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
                 setEndDate(task.endDate || task.date || '');
                 setName(task.name || '');
                 setDescription(task.description || '');
-                setColor(task.color || 'var(--blue)');
+                setColor(task.color || 'var(--cal-blue)');
             } else {
                 // Reset the modal for a new task
                 setDate(initialDate ? formatDate(parseDateTime(convertToISODate(initialDate))) : null);
                 setEndDate(initialDate ? formatDate(parseDateTime(convertToISODate(initialDate))) : null);
                 setName('');
                 setDescription('');
-                setColor('var(--blue)');
+                setColor('var(--cal-blue)');
             }
         }
     }, [isOpen, task, initialDate]);
@@ -77,8 +78,10 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
 
     const [name, setName] = useState<string>(task?.name || '');
     const [description, setDescription] = useState<string>(task?.description || '');
-    const [color, setColor] = useState<string>(task?.color || 'var(--blue)'); // Default to blue
+    const [color, setColor] = useState<string>(task?.color || 'var(--cal-blue)'); // Default to blue
     const [showColorPicker, setShowColorPicker] = useState(false);
+    const [dropdownVisible, setDropdownVisible] = useState<string | null>(null);
+    const [currentStatus, setCurrentStatus] = useState<Record<string, 'Not Started' | 'In Progress' | 'Completed'>>({});
 
     
     const handleSave = async () => {
@@ -89,7 +92,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
                 endDate: endDate || '', // Ensure endDate is included
                 name,
                 description,
-                status: task?.status || 'Not Started',
+                status: currentStatus[task?.id || ''] || task?.status || 'Not Started', // Updated status
                 color, 
             };
     
@@ -115,6 +118,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
             }
         }
     };
+    
 
     
     const handleDateChange = (newDate: CalendarDateTime, type: 'start' | 'end') => {
@@ -125,6 +129,33 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
             setEndDate(formattedDate);
         }
     };
+
+
+    const handleStatusChange = (id: string, newStatus: 'Not Started' | 'In Progress' | 'Completed') => {
+        setCurrentStatus(prev => ({ ...prev, [id]: newStatus }));
+    
+        const updatedTask: Task = {
+            id,
+            status: newStatus,
+            date: task?.date ?? "",
+            endDate: task?.endDate ?? "",
+            name: task?.name ?? "",
+            description: task?.description ?? "",
+            color: task?.color ?? "",
+        };
+    
+        onSave(updatedTask); // Trigger save
+        setDropdownVisible(null); // Close dropdown after status change
+    };
+    
+
+    
+    
+      
+      
+      const handleDropdownToggle = (id: string) => {
+        setDropdownVisible(prev => (prev === id ? null : id));
+      };
 
 
     return (
@@ -159,7 +190,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
                         className={`absolute top-1 bottom-1 left-full ml-1 flex flex-row items-center justify-center shadow-lg z-50 transition-transform transition-opacity duration-300 ease-in-out ${showColorPicker ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'} origin-left`}
                         style={{ transformOrigin: 'left' }}
                     >
-                        {['var(--blue)', 'var(--purple)', 'var(--green)', 'var(--red)', 'var(--yellow)', 'var(--grey)'].map((clr) => (
+                        {['var(--cal-blue)', 'var(--cal-purple)', 'var(--cal-cal-green)', 'var(--cal-red)', 'var(--cal-yellow)', 'var(--cal-grey)'].map((clr) => (
                             <div 
                                 key={clr}
                                 className={`w-5 h-5 rounded-full m-1 cursor-pointer ${clr === color ? 'shadow-lg shadow-[0_0_5px_rgba(255,255,255,0.5)]' : ''}`}
@@ -212,6 +243,44 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
                         fullWidth
 
                     />
+                    <Dropdown
+                        trigger="press"
+                        onOpenChange={(isOpen) => {
+                            if (!isOpen) setDropdownVisible(null);
+                        }}
+                        >
+                        <DropdownTrigger>
+                            <Button
+                            size="sm"
+                            variant="bordered"
+                            onClick={() => handleDropdownToggle(task?.id || '')}
+                            color={
+                                (currentStatus[task?.id || ''] || task?.status) === "In Progress"
+                                ? "secondary"
+                                : (currentStatus[task?.id || ''] || task?.status) === "Completed"
+                                ? "success"
+                                : "default"
+                            }
+                            >
+                            {currentStatus[task?.id || ''] || task?.status}
+                            </Button>
+                        </DropdownTrigger>
+                        <DropdownMenu
+                            selectionMode="single"
+                            closeOnSelect={true}
+                            aria-label="Select Status"
+                        >
+                            {["Not Started", "In Progress", "Completed"].map(status => (
+                            <DropdownItem
+                                key={status}
+                                onPress={() => handleStatusChange(task?.id || '', status as 'Not Started' | 'In Progress' | 'Completed')}
+
+                            >
+                                {status}
+                            </DropdownItem>
+                            ))}
+                        </DropdownMenu>
+                    </Dropdown>
                 </ModalBody>
                 <ModalFooter>
                     <Button color="danger" variant="light" onPress={onClose}>
