@@ -896,11 +896,15 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   align-items: flex-start;
   border-radius: 4px;
+  
 }
 .rbc-event {
   border-radius: 4px !important; 
 }
 
+.event-container {
+  border: var(--light-grey-border) 1px solid;
+}
 
 @media (max-width: 640px) {
   /*
@@ -990,4 +994,7 @@ button.rbc-input::-moz-focus-inner {
 }
 .event-container:hover {
   background: linear-gradient(300deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0));
+}
+.status-icons {
+  color: var(--light-grey);
 }

@@ -158,9 +158,9 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
                       onValueChange={(value) => setSelectedSession({ ...selectedSession, name: value })}
                       defaultValue={selectedSession?.name || ''}
                       placeholder="Enter Name"
-                      labelPlacement="outside"
+                      labelPlacement="inside"
                       startContent={
-                        <FaEdit className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
+                        <FaEdit className="mb-0.5 text-1xl text-default-400 pointer-events-none flex-shrink-0" />
                       }
                       />
                     <Textarea
@@ -172,9 +172,9 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
                       onValueChange={(value) => setSelectedSession({ ...selectedSession, description: value })}
                       defaultValue={selectedSession?.description || ''}
                       placeholder="Enter Description"
-                      labelPlacement="outside"
+                      labelPlacement="inside"
                       startContent={
-                        <FaRegStickyNote className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
+                        <FaRegStickyNote className="text-1xl text-default-400 pointer-events-none flex-shrink-0" />
                       }
                       />
                     <Input 
@@ -185,9 +185,9 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
                       type="startDate" 
                       label="Start Date" 
                       defaultValue={selectedSession.startDate}
-                      labelPlacement="outside"
+                      labelPlacement="inside"
                       startContent={
-                        <FaCalendar className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
+                        <FaCalendar className="mb-0.5 text-1xl text-default-400 pointer-events-none flex-shrink-0" />
                       }
                       />
                     <Input
@@ -198,9 +198,9 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
                       type="endDate" 
                       label="End Date" 
                       defaultValue={selectedSession.endDate}
-                      labelPlacement="outside"
+                      labelPlacement="inside"
                       startContent={
-                        <FaCalendar className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
+                        <FaCalendar className="mb-0.5 text-1xl text-default-400 pointer-events-none flex-shrink-0" />
                       }
                       />
                     <Input 
@@ -211,9 +211,9 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
                       type="length" 
                       label="Length" 
                       defaultValue={selectedSession.length}
-                      labelPlacement="outside"
+                      labelPlacement="inside"
                       startContent={
-                        <FaClock className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
+                        <FaClock className="mb-0.5 text-1xl text-default-400 pointer-events-none flex-shrink-0" />
                       }
                       />
                     <p><strong>Type:</strong> {selectedSession.type}</p>

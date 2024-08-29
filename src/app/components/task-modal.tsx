@@ -190,7 +190,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
                         className={`absolute top-1 bottom-1 left-full ml-1 flex flex-row items-center justify-center shadow-lg z-50 transition-transform transition-opacity duration-300 ease-in-out ${showColorPicker ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'} origin-left`}
                         style={{ transformOrigin: 'left' }}
                     >
-                        {['var(--cal-blue)', 'var(--cal-purple)', 'var(--cal-cal-green)', 'var(--cal-red)', 'var(--cal-yellow)', 'var(--cal-grey)'].map((clr) => (
+                        {['var(--cal-blue)', 'var(--cal-purple)', 'var(--cal-green)', 'var(--cal-red)', 'var(--cal-yellow)', 'var(--cal-grey)'].map((clr) => (
                             <div 
                                 key={clr}
                                 className={`w-5 h-5 rounded-full m-1 cursor-pointer ${clr === color ? 'shadow-lg shadow-[0_0_5px_rgba(255,255,255,0.5)]' : ''}`}

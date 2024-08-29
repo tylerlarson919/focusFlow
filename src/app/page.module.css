@@ -40,7 +40,7 @@
     
   }
   .paddingBottom {
-    padding-bottom: 20px;
+    padding-bottom: 15px;
   }
   @media screen and (max-width: 1320px) {
     .container {

@@ -61,6 +61,7 @@ h3 {
   --yellow: #c7d736;
   --grey: #686868;
   --light-grey: #a7a7a7;
+  --light-grey-border: rgba(167, 167, 167, 0.3);
 
   --event-hover: radial-gradient(circle, rgba(63,94,251,1) 0%, rgba(252,70,107,1) 100%);
   --calendar-lines: #2c2c2c;

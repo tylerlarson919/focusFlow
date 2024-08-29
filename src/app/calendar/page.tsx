@@ -18,7 +18,8 @@ import { db } from '../../../firebase.js';
 import CalendarContainer from "./CalendarContainer"; // Adjust the path as needed
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaSpinner, FaCircleNotch } from "react-icons/fa";
+import { FaRegCircleCheck } from "react-icons/fa6";
 
 
 const locales = {
@@ -326,8 +327,13 @@ const OpenNewTaskModal = (date: Date) => {
           }}
         />
       )}
-      <div className="rbc-event-content">
-        {event.title}
+      <div className="rbc-event-main flex flex-row w-full justify-between pr-1 items-center">
+        <div className="rbc-event-content">
+          {event.title}
+        </div>
+        {event.status === 'Not Started' && <FaCircleNotch className="status-icons"/>}
+        {event.status === 'In Progress' && <FaSpinner className="status-icons"/>}
+        {event.status === 'Completed' && <FaRegCircleCheck  className="status-icons"/>}
       </div>
     </div>
   );
@@ -369,11 +375,16 @@ const OpenNewTaskModal = (date: Date) => {
       <div className="rbc-event-content rbc-week-event event-container" style={eventStyle}>
         {event.status === 'Completed' && <div style={overlayStyle} />}
         <div className="rbc-event-content">
-          <div className="rbc-event-items">
-            {event.title}
-            <div className="rbc-length-display">
-              {lengthText}
+          <div className="rbc-event-main flex flex-row w-full justify-between pr-1 items-start">
+            <div className="rbc-event-items">
+              {event.title}
+              <div className="rbc-length-display">
+                {lengthText}
+              </div>
             </div>
+            {event.status === 'Not Started' && <FaCircleNotch className="status-icons mt-1" />}
+            {event.status === 'In Progress' && <FaSpinner className="status-icons mt-1" />}
+            {event.status === 'Completed' && <FaRegCircleCheck className="status-icons mt-1" />}
           </div>
         </div>
       </div>
@@ -413,11 +424,16 @@ const OpenNewTaskModal = (date: Date) => {
           />
         )}
         <div className="rbc-event-content ">
-          <div className="rbc-event-items">
-            {event.title}
-            <div className="rbc-length-display">
-              {lengthText}react
+          <div className="rbc-event-main flex flex-row w-full justify-between pr-1 items-start"> 
+            <div className="rbc-event-items">
+              {event.title}
+              <div className="rbc-length-display">
+                {lengthText}
+              </div>
             </div>
+            {event.status === 'Not Started' && <FaCircleNotch className="status-icons mt-1 mr-2" />}
+            {event.status === 'In Progress' && <FaSpinner className="status-icons mt-1 mr-2" />}
+            {event.status === 'Completed' && <FaRegCircleCheck className="status-icons mt-1 mr-2" />}
           </div>
         </div>
       </div>
