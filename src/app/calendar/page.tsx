@@ -160,8 +160,10 @@ const MyCalendar = () => {
           setEvents((prevEvents) => [
             ...prevEvents,
             {
-              ...updatedEvent,
-              resource: { ...updatedEvent.resource, id: newId }
+              ...event,
+              start: startDate,  // Update state with the new start date
+              end: endDate,      // Update state with the new end date
+              resource: { ...event.resource, id: newId, date: formattedStart, endDate: formattedEnd }
             }
           ]);
         } catch (error) {
@@ -178,7 +180,9 @@ const MyCalendar = () => {
           // Update event in state
           setEvents((prevEvents) =>
             prevEvents.map((ev) =>
-              ev.resource.id === event.resource.id ? updatedEvent : ev
+              ev.resource.id === event.resource.id
+                ? { ...updatedEvent, resource: { ...ev.resource, date: formattedStart, endDate: formattedEnd } }
+                : ev
             )
           );
         } catch (error) {
@@ -580,6 +584,8 @@ const OpenNewTaskModal = (date: Date) => {
       <div className="flex-1">
       <DragAndDropCalendar
         key={events.length}
+        step={15}
+        timeslots={4}
         localizer={localizer}
         events={events}
         startAccessor={startAccessor}

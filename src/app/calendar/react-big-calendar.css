@@ -86,6 +86,7 @@ button.rbc-input::-moz-focus-inner {
   font-size: 90%;
   min-height: 0;
   color: var(--text-color);
+  background-color: var(--dark1);
 }
 
 .rbc-rtl .rbc-header + .rbc-header {
@@ -657,6 +658,8 @@ button.rbc-input::-moz-focus-inner {
   -webkit-box-flex: 1;
       -ms-flex: 1 0 0px;
           flex: 1 0 0;
+  line-height: 50px;
+
 }
 .rbc-time-slot.rbc-now {
   font-weight: bold;
