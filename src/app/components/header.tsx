@@ -15,7 +15,6 @@ const HeaderMain: React.FC<HeaderMainProps> = ({ className }) => {
   const menuItems = [
     "Dashboard",
     "Calendar",
-    "Stats",
     "Settings",
   ];
   
