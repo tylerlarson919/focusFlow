@@ -218,9 +218,15 @@ const MyCalendar = () => {
         endDate: formattedEnd,
       }).then(() => {
         // Update event in state
+
         setEvents((prevEvents) =>
-          prevEvents.map((ev) => (ev.resource.id === event.resource.id ? updatedEvent : ev))
+          prevEvents.map((ev) =>
+            ev.resource.id === event.resource.id
+              ? { ...updatedEvent, resource: { ...ev.resource, date: formattedStart, endDate: formattedEnd } }
+              : ev
+          )
         );
+
       }).catch((error) => {
         console.error('Error updating event:', error);
       });

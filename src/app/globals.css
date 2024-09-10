@@ -38,7 +38,10 @@ h3 {
   font-size: 46px;
   font-weight: bold;
 }
-
+h5 {
+  font-size: 30px;
+  font-weight: bold;
+}
 
 @layer utilities {
   .text-balance {
