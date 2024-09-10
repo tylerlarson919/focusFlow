@@ -46,38 +46,21 @@ const sortDataByDate = (data: { name: string; totalLength: number }[]) => {
   });
 };
 
+// Define the type for chart data
+interface ChartData {
+  name: string;
+  totalLength: number;
+}
+
 // StatsChart component
-const StatsChart: NextPage<{ sessions: any[]; className?: string }> = ({ sessions, className = "" }) => {
-  const [chartData, setChartData] = useState<{ name: string; totalLength: number }[]>([]);
+const StatsChart: NextPage<{ data: { name: string; totalLength: number }[]; className?: string }> = ({ data, className = "" }) => {
+  const [chartData, setChartData] = useState<ChartData[]>(data);
 
   useEffect(() => {
-    const data = sessions.reduce((acc: { name: string; totalLength: number }[], session) => {
-      const sessionDate = parseDate(session.startDate);
-      
-      if (!sessionDate) {
-        console.error(`Error parsing date: ${session.startDate}`);
-        return acc;
-      }
-      
-      const formattedDate = format(sessionDate, 'M/d/yy'); // Format date as '9/1/24'
-      const sessionLengthInMinutes = convertLengthToMinutes(session.length);
-      
-      const existingDateEntry = acc.find((entry) => entry.name === formattedDate);
-      if (existingDateEntry) {
-        existingDateEntry.totalLength += sessionLengthInMinutes;
-      } else {
-        acc.push({ name: formattedDate, totalLength: sessionLengthInMinutes });
-      }
-      
-      return acc;
-    }, []);
-
     const sortedData = sortDataByDate(data);
-
     console.log('Chart Data:', sortedData);
-
     setChartData(sortedData);
-  }, [sessions]);
+  }, [data]);
 
   return (
     <div className={[styles.statsChartPlaceholder, className].join(" ")}>
@@ -93,37 +76,42 @@ const StatsChart: NextPage<{ sessions: any[]; className?: string }> = ({ session
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="none" stroke="var(--dark3)" />
-          <XAxis dataKey="name" tick={{ fontSize: 16, dy: 10 }} axisLine={false} tickLine={false} />
+          <XAxis
+            dataKey="name"
+            tick={{ fontSize: 16, dy: 10 }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(name = '') => {
+              const parsedDate = parseDate(name);
+              return parsedDate ? format(parsedDate, 'MMM dd, yyyy') : name;
+            }}
+          />
           <YAxis
-            tickFormatter={(value) => {
+            tickFormatter={(value = 0) => {
               const hours = Math.floor(value / 60);
               return `${hours}h`;
             }}
-            tick={{ fontSize: 16, dx: -10 }}
             axisLine={false}
             tickLine={false}
           />
-
-
-            <Tooltip
-              content={({ payload, label }) => {
-                if (payload && payload.length) {
-                  const totalLengthInMinutes = payload[0]?.value as number || 0; // Assert as number and default to 0 if undefined
-                  const hours = Math.floor(totalLengthInMinutes / 60);
-                  const minutes = totalLengthInMinutes % 60;
-                  return (
-                    <div style={{ border: '0px', borderRadius: '10px', backgroundColor: 'rgba(0, 0, 0, 0.4)', color: '#fff', fontSize: '12px' }}>
-                      <p>{label}</p>
-                      <p>Length: {hours}h {minutes}m</p>
-                    </div>
-                  );
-                }
-                return null;
-              }}
-              itemStyle={{ color: '#fff' }}
-            />
-
-
+          
+          <Tooltip
+            content={({ payload, label }) => {
+              if (payload && payload.length) {
+                const totalLengthInMinutes = payload[0]?.value as number || 0; // Assert as number and default to 0 if undefined
+                const hours = Math.floor(totalLengthInMinutes / 60);
+                const minutes = totalLengthInMinutes % 60;
+                return (
+                  <div style={{ border: '0px', borderRadius: '10px', backgroundColor: 'rgba(0, 0, 0, 0.4)', color: '#fff', fontSize: '12px' }}>
+                    <p>{label}</p>
+                    <p>Length: {hours}h {minutes}m</p>
+                  </div>
+                );
+              }
+              return null;
+            }}
+            itemStyle={{ color: '#fff' }}
+          />
           <Area
             type="monotone"
             dataKey="totalLength"
