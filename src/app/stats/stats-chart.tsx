@@ -27,6 +27,15 @@ const parseDate = (timestamp: any): Date | null => {
     if (timestamp.toDate) {
       return timestamp.toDate();
     } else if (typeof timestamp === 'string') {
+      const parsed = new Date(timestamp);
+      if (isNaN(parsed.getTime())) {
+        // Invalid date string, log the issue
+        console.error(`Invalid date string: ${timestamp}`);
+        return null;
+      }
+      return parsed;
+    } else if (typeof timestamp === 'number') {
+      // Handling Unix timestamps (milliseconds)
       return new Date(timestamp);
     }
     return null;
@@ -35,6 +44,9 @@ const parseDate = (timestamp: any): Date | null => {
     return null;
   }
 };
+
+
+
 
 // Function to sort data by date
 const sortDataByDate = (data: { name: string; totalLength: number }[]) => {
@@ -86,6 +98,7 @@ const StatsChart: NextPage<{ data: { name: string; totalLength: number }[]; clas
               return parsedDate ? format(parsedDate, 'MMM dd, yyyy') : name;
             }}
           />
+
           <YAxis
             tickFormatter={(value = 0) => {
               const hours = Math.floor(value / 60);

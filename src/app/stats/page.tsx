@@ -6,7 +6,7 @@ import HeaderMain from '../components/header';
 import { DateRangePicker, RangeValue, DateValue, Dropdown, DropdownTrigger, DropdownMenu, DropdownSection, DropdownItem, Button } from "@nextui-org/react";
 import { collection, query, getDocs } from "firebase/firestore";
 import { db } from "../../../firebase";
-import { format } from 'date-fns';
+import { startOfWeek, startOfMonth, startOfYear, format } from 'date-fns';
 import { convertLengthToMinutes, parseDate, sortDataByDate } from './utils';
 
 const StatsPage: React.FC = () => {
@@ -36,23 +36,19 @@ const StatsPage: React.FC = () => {
       console.log('Sorting sessions...');
       let filteredSessions = sessions;
     
-      if (Array.isArray(dateRange) && dateRange.length === 2 && dateRange[0] && dateRange[1]) {
-        const startDate = new Date(dateRange[0]);
-        const endDate = new Date(dateRange[1]);
-        console.log('Date range:', startDate, endDate);
+      if (dateRange && dateRange.start && dateRange.end) {
+        const startDate = new Date(dateRange.start.year, dateRange.start.month - 1, dateRange.start.day);
+        const endDate = new Date(dateRange.end.year, dateRange.end.month - 1, dateRange.end.day);
     
         filteredSessions = sessions.filter((session) => {
           const sessionDate = parseDate(session.startDate);
-          console.log(`Session ${session.id} date:`, sessionDate);
     
-          // Ensure the dates are valid before comparison
           if (!sessionDate || isNaN(sessionDate.getTime())) {
             console.error(`Invalid session date: ${session.startDate}`);
             return false;
           }
     
           const isInRange = sessionDate >= startDate && sessionDate <= endDate;
-          console.log(`Session ${session.id} is in range: ${isInRange}`);
           return isInRange;
         });
       } else {
@@ -70,17 +66,24 @@ const StatsPage: React.FC = () => {
         try {
           switch (selectedPeriod) {
             case 'week':
-              formattedDate = format(sessionDate, 'w-yy');
+              // Get the start of the week
+              const startOfWeekDate = startOfWeek(sessionDate, { weekStartsOn: 1 }); // Assuming week starts on Monday
+              formattedDate = format(startOfWeekDate, 'M/d/yyyy');
               break;
             case 'month':
-              formattedDate = format(sessionDate, 'M-yy');
+              // Get the start of the month
+              const startOfMonthDate = startOfMonth(sessionDate);
+              formattedDate = format(startOfMonthDate, 'M/d/yyyy');
               break;
             case 'year':
-              formattedDate = format(sessionDate, 'yy');
+              // Get the start of the year
+              const startOfYearDate = startOfYear(sessionDate);
+              formattedDate = format(startOfYearDate, 'M/d/yyyy');
               break;
             case 'day':
             default:
-              formattedDate = format(sessionDate, 'M/d/yy');
+              // Use the exact date
+              formattedDate = format(sessionDate, 'M/d/yyyy');
               break;
           }
         } catch (error) {
@@ -99,30 +102,28 @@ const StatsPage: React.FC = () => {
         return acc;
       }, []);
     
-      console.log('Data before sorting:', data);
       const sortedData = sortDataByDate(data);
-      console.log('Sorted data:', sortedData);
       setChartData(sortedData);
     };
+    
 
     sortSessions();
   }, [sessions, dateRange, selectedPeriod]);
 
   const handleDateRangeChange = (range: RangeValue<DateValue> | null) => {
-    console.log('Range received:', range);
-    if (range && Array.isArray(range) && range.length === 2) {
-      const [start, end] = range;
   
-      console.log('Start DateValue:', start);
-      console.log('End DateValue:', end);
+    if (range && typeof range.start === 'object' && typeof range.end === 'object') {
+      const { start, end } = range;
   
-      // Assuming the DateRangePicker needs DateValue as { start, end }
+  
+      // Update the state as RangeValue<DateValue>
       setDateRange({ start, end });
     } else {
       console.log('No valid date range selected');
       setDateRange(null); // Clear the date range if invalid
     }
   };
+  
   
   
   
@@ -169,6 +170,10 @@ const StatsPage: React.FC = () => {
         </div>
         <StatsChart data={chartData} />
       </div>
+      <div className={styles.rowTwo}>
+        
+      </div>
+
     </div>
   );
 };
