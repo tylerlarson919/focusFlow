@@ -13,6 +13,38 @@
     align-items: center;
   }
   
+.mainContainer {
+display: flex;
+flex-direction: column;
+background-color: var(--dark1);
+}
+
+.habitFrame {
+  height: 220px;
+  padding-top: 20px;
+  display: flex;
+  flex-direction: row;
+  gap: 80px;
+}
+.habitFrameLeft, .habitFrameRight {
+  background-color: var(--dark2);
+  border-radius: 60px;
+  padding: 20px;
+}
+.headingText {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.habitFrameLeft {
+  width: 20%;
+}
+.habitFrameRight {
+  width: 80%;
+  padding-left: 30px;
+  padding-right: 30px;
+  padding-top: 20px;
+}
 
   /* Left and Right frames taking up half of the width and full height */
   .leftFrame, .rightFrame {

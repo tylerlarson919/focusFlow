@@ -1,18 +1,20 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './page.module.css';
 import LeftTop from './components/dashboard-left-top';
 import LeftBottom from './components/dashboard-left-bottom';
 import RightTop from './components/dashboard-right-top';
 import RightBottom from './components/dashboard-right-bottom';
-import { Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Link, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, useDisclosure, Input, select, Textarea } from "@nextui-org/react";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, useDisclosure, Input, Textarea, Card, CardHeader, CardBody, CardFooter } from "@nextui-org/react";
 import { FaCalendar, FaClock, FaEdit, FaRegStickyNote, FaTrash } from "react-icons/fa";
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, collection, query, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase.js';
 import TaskModal from './components/task-modal';
 import HeaderMain from './components/header';
-
+import HabitProgressCircle from './stats/HabitProgressCircle'
+import { format, eachDayOfInterval, subDays, addDays } from 'date-fns';
+import HabitCards from './stats/HabitCards';
 
 // Define the type for session logs
 interface Session {
@@ -25,7 +27,27 @@ interface Session {
   description?: string; 
 }
 
+interface Habit {
+  id: string;
+  name: string;
+  status: string;
+  color: string;
+  habit_id: string;
+}
 
+interface HabitLog {
+  id: string;
+  date: string; // Ensure this is a date string in your Firestore documents
+  habit_id: string;
+  status: string;
+}
+
+interface Task {
+  id: string;
+  completedAt: string; // or Date if you prefer
+  status: string;
+  date: string;
+}
 
 
 const Page: React.FC = () => {
@@ -35,6 +57,13 @@ const Page: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [tasks, setTasks] = useState<any[]>([]);
+
+  // Add these for habits
+  const [mainProgress, setMainProgress] = useState<{ date: string; percentage: number }[]>([]);
+  const [habitsProgress, setHabitsProgress] = useState<{ date: string; habits: { name: string; status: string; color: string; habit_id?: string}[] }[]>([]);
+  const [hasFetchedHabitsAndTasks, setHasFetchedHabitsAndTasks] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [todayHabits, setTodayHabits] = useState<Habit[]>([]);
 
 
   // Handle session selection
@@ -74,20 +103,149 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
   }
 };
   
+useEffect(() => {
+  const unsubscribeTasks = onSnapshot(query(collection(db, "tasks")), (snapshot) => {
+    const fetchedTasks = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Task[];
+
+    // Process task progress
+    const taskProgress = fetchedTasks.reduce(
+      (acc: { [date: string]: { completed: number; total: number } }, task) => {
+        let taskDate;
+        try {
+          taskDate = new Date(task.date);
+          if (isNaN(taskDate.getTime())) throw new Error("Invalid date");
+        } catch {
+          console.error(`Invalid task date: ${task.date}`);
+          return acc;
+        }
+
+        const formattedDate = format(taskDate, "M/d/yyyy");
+        if (!acc[formattedDate]) {
+          acc[formattedDate] = { completed: 0, total: 0 };
+        }
+        acc[formattedDate].total += 1;
+        if (task.status === "Completed") {
+          acc[formattedDate].completed += 1;
+        }
+        return acc;
+      },
+      {}
+    );
+
+    const mainProgress = Object.entries(taskProgress).map(
+      ([date, { completed, total }]) => ({
+        date,
+        percentage: total === 0 ? 0 : (completed / total) * 100,
+      })
+    );
+
+    setTasks(fetchedTasks);
+    setMainProgress(mainProgress);
+  });
+
+  const unsubscribeHabits = onSnapshot(query(collection(db, "habits", "main", "habits_refrence")), (snapshot) => {
+    const fetchedHabits = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Habit[];
+
+    const unsubscribeHabitLogs = onSnapshot(query(collection(db, "habits", "main", "habits_log")), (snapshot) => {
+      const habitsLogs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as HabitLog[];
+
+      // Process habit log data
+      const startOfTwoMonthDate = subDays(new Date(), 10);
+      const endOfTwoMonthDate = addDays(new Date(), 10);
+      const weekDates = eachDayOfInterval({ start: startOfTwoMonthDate, end: endOfTwoMonthDate }).map(date => format(date, "M/d/yyyy"));
+
+      const existingDates = new Set(habitsLogs.map(log => format(new Date(log.date), "M/d/yyyy")));
+      const habitMap = new Map(fetchedHabits.map(habit => [habit.habit_id, habit]));
+
+      const habitData = weekDates.reduce((acc: { [date: string]: { name: string; status: string; color: string; habit_id: string }[] }, date) => {
+        const logsForDate = habitsLogs.filter(log => format(addDays(new Date(log.date), 1), "M/d/yyyy") === date);
+        const habitsForDate = fetchedHabits.map(habit => {
+          const logForHabit = logsForDate.find(log => log.habit_id === habit.habit_id);
+          return logForHabit
+            ? { ...logForHabit, name: habit.name, color: habit.color }
+            : { name: habit.name, status: "Incomplete", color: habit.color, habit_id: habit.habit_id };
+        });
+        acc[date] = habitsForDate;
+        return acc;
+      }, {});
+
+      const habitsProgressArray = Object.entries(habitData).map(([date, habits]) => ({
+        date,
+        habits,
+      }));
+
+      setHabitsProgress(habitsProgressArray);
+    });
+
+    return () => {
+      unsubscribeTasks();
+      unsubscribeHabits();
+    };
+  });
+}, []);
+
+
+
+useEffect(() => {
+  if (habitsProgress.length > 0) {
+    const today = format(new Date(), 'M/d/yyyy');
+    const todaysData = habitsProgress.find((progress) => progress.date === today);
+    
+    if (todaysData) {
+      const habitsWithId = todaysData.habits.map(habit => ({
+        id: habit.habit_id || '', // Ensure id is a string
+        name: habit.name,
+        status: habit.status,
+        color: habit.color,
+        habit_id: habit.habit_id || '',
+      }));
+      
+      setTodayHabits(habitsWithId);
+    }
+  }
+}, [habitsProgress]);
+
+
 
 
   return (
 <div className="overflow-hidden">
   <HeaderMain />
-
+    <div className={styles.mainContainer}>
+      <div className={styles.habitFrame}>
+        <div className={styles.habitFrameLeft}>
+          <HabitProgressCircle
+            mainProgress={mainProgress}
+            habitsProgress={habitsProgress}
+            moduleType={"day"}
+          />
+        </div>
+        <div className={styles.habitFrameRight}>
+          <div className="flex flex-col">
+            <div className={styles.headingText}>Habits</div>
+            <div className={styles.habitCards}>
+            <HabitCards habits={todayHabits} />
+            </div>
+          </div>
+        </div>
+      </div>
     <div className={styles.container}>
       <div className={styles.leftFrame}>
-      <LeftTop
-        onNewTaskClick={OpenNewTaskModal}
-        onEditTaskClick={OpenEditTaskModal}  // New prop for editing tasks
-        tasks={tasks} // Ensure tasks is provided
-        setTasks={setTasks} // Ensure setTasks is provided
-      />
+        <LeftTop
+          onNewTaskClick={OpenNewTaskModal}
+          onEditTaskClick={OpenEditTaskModal}  // New prop for editing tasks
+          tasks={tasks} // Ensure tasks is provided
+          setTasks={setTasks} // Ensure setTasks is provided
+        />
         <LeftBottom />
       </div>
       <div className={styles.rightFrame}>
@@ -97,6 +255,8 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
           onSessionSelect={handleSessionSelect} 
         />
       </div>
+      </div>
+
       <TaskModal 
         isOpen={isTaskModalOpen} 
         onClose={() => setIsTaskModalOpen(false)}
@@ -241,16 +401,3 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
 };
 
 export default Page;
-
-
-
-
-
-// 2. Timer is completely fucked and Does not log the end time when the timer ends. Also, the plant growth stages are messed up as well and are not changing. 
-// 3. There should be a button on the left top to go to the schedule page, the schedule page will be a page where you can schedule for any day and see weekly or monthly overviews and how you're doing keeping up with the tasks, based off of the sessions logged
-// 4. On the bottom part of the left side of the page, should be a calendar widget. Just a super simple calendar widget with marks on the dates that time was logged for, when you click on a date it will open a pop up with a table containing all the logs from that date and the total time logged, and maybe some other stats too.
-
-// Features for later:
-    // - Option to listen to combing sounds as the timer is playing, and also the option to choose which sounds
-    // - Option to choose an alarm, saving the alarm preference to the fire store database for that user
-    // - A stats page containing stats like average time per day, longest session, total hours logged etc.

@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, doc, writeBatch } from "firebase/firestore";
+import { query, where, getFirestore, collection, addDoc, getDocs, getDoc, doc, writeBatch, setDoc } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; // Import Firebase Storage
 
 
@@ -56,40 +56,76 @@ export const getSessions = async () => {
   }
 };
 
-const createMissingHabitsInFirestore = async (habits) => {
-  const batch = writeBatch(db);
-
-  habits.forEach(habit => {
-    // Check if habit_id is defined
-    if (!habit.habit_id) {
-      console.warn(`Skipping habit with undefined habit_id: ${habit.name}, Structure: ${JSON.stringify(habit)}`);
-      return; // Skip this habit
-    }
-
-    // Generate a new document reference for each habit
-    const habitDocRef = doc(collection(db, "habits", "main", "habits_log"));
-
-    // Set the document with the habit details
-    batch.set(habitDocRef, {
-      name: habit.name,
-      status: habit.status,
-      color: habit.color,
-      date: habit.date,
-      habit_id: habit.habit_id,
-    });
-  });
-
+export const createOrUpdateHabitInFirestore = async (habit) => {
   try {
-    await batch.commit();
-    console.log('Missing habits created successfully.');
+    const { id, ...habitData } = habit;
+    const currentDate = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+
+    // Query the habits_log collection to find if a document with the same habit_id and date exists
+    const habitQuery = query(
+      collection(db, 'habits/main/habits_log'),
+      where('habit_id', '==', id),
+      where('date', '==', currentDate)
+    );
+
+    const querySnapshot = await getDocs(habitQuery);
+    const existingDoc = querySnapshot.docs[0];
+
+    if (existingDoc) {
+      // Document exists, update it
+      const habitRef = doc(db, 'habits/main/habits_log', existingDoc.id);
+      await setDoc(habitRef, {
+        ...habitData,
+        status: habit.status,
+        updatedAt: new Date().toISOString().split('T')[0], // Ensure updated date is current date
+      }, { merge: true });
+
+      console.log(`Habit ${id} updated with ID: ${existingDoc.id}`);
+    } else {
+      // Document does not exist, create a new one
+      const habitRef = await addDoc(collection(db, 'habits/main/habits_log'), {
+        ...habitData,
+        status: habit.status,
+        date: currentDate, // Set current date only
+      });
+
+      // Update the document to set the habit_id field
+      await setDoc(habitRef, { habit_id: id }, { merge: true });
+
+      console.log(`Habit created with ID: ${habitRef.id}`);
+    }
   } catch (error) {
-    console.error('Error creating missing habits:', error);
+    console.error('Error creating/updating habit:', error);
   }
 };
 
+/**
+ * Fetches the status of a habit from the habits_log collection.
+ * @param {string} habitId - The habit ID to fetch the status for.
+ * @returns {Promise<string | null>} - The status of the habit or null if no document exists.
+ */
 
+export const getHabitLogStatus = async (habitId) => {
+  try {
+    const currentDate = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+    const habitQuery = query(
+      collection(db, 'habits/main/habits_log'),
+      where('habit_id', '==', habitId),
+      where('date', '==', currentDate)
+    );
+    const querySnapshot = await getDocs(habitQuery);
 
-
+    if (!querySnapshot.empty) {
+      const data = querySnapshot.docs[0].data();
+      return data.status || 'incomplete'; // Default to 'incomplete' if no status is found
+    } else {
+      return 'incomplete'; // No document found for today, default to 'incomplete'
+    }
+  } catch (error) {
+    console.error('Error fetching habit status:', error);
+    return 'incomplete'; // Return 'incomplete' in case of an error
+  }
+};
 
 
 
@@ -119,4 +155,4 @@ export const getTasks = async () => {
 
 
 // Export the initialized Firebase app, auth, and db
-export { app, db, storage, tasksCollection, habitsCollection, createMissingHabitsInFirestore };
+export { app, db, storage, tasksCollection, habitsCollection };

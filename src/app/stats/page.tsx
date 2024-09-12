@@ -4,9 +4,9 @@ import styles from './page.module.css';
 import StatsChart from './stats-chart';
 import HeaderMain from '../components/header';
 import { DateRangePicker, RangeValue, DateValue, Dropdown, DropdownTrigger, DropdownMenu, DropdownSection, DropdownItem, Button } from "@nextui-org/react";
-import { collection, query, getDocs, writeBatch, doc } from "firebase/firestore";
-import { db, createMissingHabitsInFirestore  } from "../../../firebase";
-import { startOfWeek, endOfWeek, startOfMonth, startOfYear, format, eachDayOfInterval } from 'date-fns';
+import { collection, query, getDocs, writeBatch, doc, Timestamp } from "firebase/firestore";
+import { db  } from "../../../firebase";
+import { startOfWeek, endOfWeek, startOfMonth, startOfYear, format, eachDayOfInterval, subDays, addDays } from 'date-fns';
 import { convertLengthToMinutes, parseDate, sortDataByDate } from './utils';
 import HabitProgressCircle from './HabitProgressCircle'
 
@@ -45,6 +45,7 @@ const StatsPage: React.FC = () => {
   const [habitsProgress, setHabitsProgress] = useState<{ date: string; habits: { name: string; status: string; color: string }[] }[]>([]);
   const [hasFetchedHabitsAndTasks, setHasFetchedHabitsAndTasks] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -216,93 +217,34 @@ const StatsPage: React.FC = () => {
         })) as HabitLog[];
     
         // Get the start and end of the current week
-        const startOfWeekDate = startOfWeek(new Date(), { weekStartsOn: 1 });
-        const endOfWeekDate = endOfWeek(new Date(), { weekStartsOn: 1 });
-        const weekDates = eachDayOfInterval({ start: startOfWeekDate, end: endOfWeekDate }).map(date => format(date, "M/d/yyyy"));
-    
+        const startOfTwoMonthDate = subDays(new Date(), 30);
+        const endOfTwoMonthDate = addDays(new Date(), 30);
+        const weekDates = eachDayOfInterval({ 
+          start: startOfTwoMonthDate, 
+          end: endOfTwoMonthDate 
+        }).map(date => format(date, "M/d/yyyy"));
+            
         // Create new documents in habits_log if missing for the week
         const existingDates = new Set(habitsLogs.map(log => format(new Date(log.date), "M/d/yyyy")));
-        const missingDates = weekDates.filter(date => !existingDates.has(date));
-    
-        if (missingDates.length > 0) {
-          console.warn("Missing habit logs found. Creating new logs for the week.");
-          const batch = writeBatch(db);
-    
-          // Create new logs for each missing date and each habit
-          missingDates.forEach(date => {
-            fetchedHabits.forEach(habit => {
-              // Check if an entry already exists for this habit on this date
-              const existingLogForDate = habitsLogs.some(log => format(new Date(log.date), "M/d/yyyy") === date && log.habit_id === habit.habit_id);
-              
-              // Only create a new log if none exists
-              if (!existingLogForDate) {
-                const logRef = doc(collection(db, "habits", "main", "habits_log"));
-                batch.set(logRef, {
-                  name: habit.name,
-                  status: "Incomplete", // Default status
-                  color: habit.color,
-                  habit_id: habit.habit_id,
-                  date: new Date(date).toISOString(), // Set date for each missing entry
-                });
-              }
-            });
-          });
-    
-          try {
-            await batch.commit();
-            console.log("Created new habits logs for missing dates.");
-            fetchHabitsAndTasks(); // Optionally refetch if needed
-          } catch (error) {
-            console.error("Error creating new habits logs:", error);
-          }
-        } else {
-          // Optionally handle case where no logs are missing
-        }
-    
+        
         // Map fetched habits for easier lookup by habit_id
         const habitMap = new Map(fetchedHabits.map((habit) => [habit.habit_id, habit]));
     
         // Process habit log data
-        const habitData = habitsLogs.reduce(
-          (acc: { [date: string]: { name: string; status: string; color: string; habit_id: string }[] }, log) => {
-            let logDate;
-            try {
-              if (!log.date) {
-                throw new Error("Missing log date");
-              }
-              logDate = new Date(log.date);
-              if (isNaN(logDate.getTime())) throw new Error("Invalid date");
-            } catch (error) {
-              console.error(`Invalid log date: ${log.date}`, error);
-              return acc;
-            }
-    
-            const formattedDate = format(logDate, "M/d/yyyy");
-    
-            // Initialize date entry if it doesn't exist
-            if (!acc[formattedDate]) {
-              acc[formattedDate] = [];
-            }
-    
-            // Find the corresponding habit using habit_id
-            const correspondingHabit = habitMap.get(log.habit_id);
-            if (!correspondingHabit) {
-              console.warn(`Habit not found for habit_id: ${log.habit_id}, habit: ${JSON.stringify(log)}`);
-              return acc;
-            }
-    
-            // Push the habit log to the appropriate date
-            acc[formattedDate].push({
-              name: correspondingHabit.name,
-              status: log.status,
-              color: correspondingHabit.color,
-              habit_id: log.habit_id,
-            });
-            return acc;
-          },
-          {}
-        );
-    
+        const habitData = weekDates.reduce((acc: { [date: string]: { name: string; status: string; color: string; habit_id: string }[] }, date) => {
+          const logsForDate = habitsLogs.filter(log => format(addDays(new Date(log.date), 1), "M/d/yyyy") === date);
+          const habitsForDate = fetchedHabits.map(habit => {
+            const logForHabit = logsForDate.find(log => log.habit_id === habit.habit_id);
+            return logForHabit
+              ? { ...logForHabit, name: habit.name, color: habit.color }
+              : { name: habit.name, status: "Incomplete", color: habit.color, habit_id: habit.habit_id };
+          });
+          acc[date] = habitsForDate;
+          return acc;
+        }, {});
+        
+
+
         // Convert habitData to an array of objects with date and habits
         const habitsProgressArray = Object.entries(habitData).map(([date, habits]) => ({
           date,

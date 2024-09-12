@@ -154,7 +154,7 @@ const handleRowAction = (key: React.Key) => {
         <button className={styles.arrowButton} onClick={handlePrevDay}>
           {"<"}
         </button>
-        <span className={styles.dateDisplay} onClick={handleDateClick}>
+        <span className={`${styles.dateDisplay} font-semibold`} onClick={handleDateClick}>
           {formatDate(currentDate)}
         </span>
         <button className={styles.arrowButton} onClick={handleNextDay}>
