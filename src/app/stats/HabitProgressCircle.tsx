@@ -49,13 +49,13 @@ const HabitProgressCircle: React.FC<HabitProgressCircleProps> = ({
     return habitsProgress.find((progress) => progress.date === formattedDate)?.habits || [];
   };
 
-  const radiusHabit = 50;
-  const radiusMain = 40;
+  const radiusHabit = 60;
+  const radiusMain = 45;
   const circumferenceHabit = 2 * Math.PI * radiusHabit;
   const circumferenceMain = 2 * Math.PI * radiusMain;
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center w-full h-full">
       <div className="flex items-center mb-4">
         <button onClick={handlePrevWeek} className="mr-2">
           <FaArrowLeft />
@@ -67,82 +67,101 @@ const HabitProgressCircle: React.FC<HabitProgressCircleProps> = ({
           <FaArrowRight />
         </button>
       </div>
-      <div className="flex space-x-4">
-        {weekDates.map((date) => {
-          const progress = getProgressForDate(date);
-          const habits = getHabitsForDate(date);
+        <div className="flex justify-between w-full h-full p-6 ">
+          {weekDates.map((date) => {
+            const progress = getProgressForDate(date);
+            const habits = getHabitsForDate(date);
 
-          const taskOffset = circumferenceMain - (progress.percentage / 100) * circumferenceMain;
+            const taskOffset = circumferenceMain - (progress.percentage / 100) * circumferenceMain;
 
-          
+            return (
+              <div key={format(date, 'M/d/yyyy')} className={`relative flex flex-col items-center w-full h-full justify-center`}>
+                {/* Date Text */}
+                <div className="text-center text-s">
+                  {format(date, 'EEE,')} <br /> {format(date, 'M/d')}
+                </div>
 
-          return (
-            <div key={format(date, 'M/d/yyyy')} className="relative flex items-center justify-center w-28 h-28">
-              <div className="text-center text-s">
-                {format(date, 'EEE,')} <br /> {format(date, 'M/d')}
-            </div>
+                {/* Circles Container */}
+                <div className="absolute flex items-center justify-center mt">
+                  <svg 
+                    className="relative" 
+                    width={radiusHabit * 2 + 20} // Slight padding for avoiding cut-off
+                    height={radiusHabit * 2 + 20} 
+                    viewBox={`0 0 ${radiusHabit * 2 + 20} ${radiusHabit * 2 + 20}`} 
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    {/* Habit Circles */}
+                    {habits.map((habit, index) => {
+                      const numberOfHabits = habits.length;
+                      const gapSize = 12;
+                      const totalGapSize = gapSize * numberOfHabits;
+                      const availableCircumference = circumferenceHabit - totalGapSize;
+                      const sectionSize = availableCircumference / numberOfHabits;
+                      const offset = -(index * (sectionSize + gapSize));
 
-              <svg 
-                className="absolute inset-0 m-auto" 
-                width={radiusHabit * 2.5} 
-                height={radiusHabit * 2.5} 
-                viewBox={`0 0 ${radiusHabit * 2.5} ${radiusHabit * 2.5}`} 
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                {habits.map((habit, index) => {
-                    const numberOfHabits = habits.length;
-                    const gapSize = 12; // Gap size between segments
-                    
-                    // Calculate segment size based on circumference and number of gaps
-                    const totalGapSize = gapSize * numberOfHabits;
-                    const availableCircumference = circumferenceHabit - totalGapSize;
-                    const sectionSize = availableCircumference / numberOfHabits;
+                      const strokeColor = habit.status === 'complete' ? habit.color : 'var(--dark3)';
 
-                    // Calculate offset, accounting for gaps
-                    const offset = -(index * (sectionSize + gapSize));
+                      return (
+                        <g key={index} className="habit-group">
+                        <Tooltip content={habit.name} >
+                          <circle
+                            cx={radiusHabit + 10} 
+                            cy={radiusHabit + 10}
+                            r={radiusHabit}
+                            stroke={strokeColor}
+                            strokeWidth="6"
+                            fill="transparent"
+                            strokeDasharray={`${sectionSize} ${circumferenceHabit - sectionSize}`}
+                            strokeDashoffset={offset}
+                            strokeLinecap="round"
+                            style={{ transition: "stroke-dashoffset 0.5s ease", pointerEvents: 'visibleStroke' }}
+                          />
+                        </Tooltip>
+                      </g>
+                      );
+                    })}
 
-                    const strokeColor = habit.status === 'complete' ? habit.color : 'var(--dark3)';
+                      {/* Outer Circle */}
+                      <g className="main-progress-group">
+                        <Tooltip content={`Progress: ${progress.percentage}%`} >
+                          <circle
+                            cx={radiusHabit + 10}
+                            cy={radiusHabit + 10}
+                            r={radiusMain}
+                            stroke="var(--dark3)"
+                            strokeWidth="8"
+                            fill="transparent"
+                            strokeDasharray={circumferenceMain}
+                            strokeDashoffset="0"
+                            style={{ pointerEvents: 'visibleStroke' }} // Ensure hover only triggers on the stroke
+                          />
+                        </Tooltip>
+                      </g>
 
-                    return (
-                    <Tooltip key={index} content={habit.name}>
-                        <circle
-                        cx={radiusHabit + gapSize / 2}
-                        cy={radiusHabit + gapSize / 2}
-                        r={radiusHabit}
-                        stroke={strokeColor}
-                        strokeWidth="8"
-                        fill="transparent"
-                        strokeDasharray={`${sectionSize} ${circumferenceHabit - sectionSize}`} // Segment size and remaining length
-                        strokeDashoffset={offset}
-                        strokeLinecap="round"
-                        style={{ transition: "stroke-dashoffset 0.5s ease" }}
-                        />
-                    </Tooltip>
-                    );
-                })}
-                <circle
-                    cx={radiusHabit}
-                    cy={radiusHabit}
-                    r={radiusMain}
-                    stroke="var(--cal-purple)"
-                    strokeWidth="8"
-                    fill="transparent"
-                    strokeDasharray={circumferenceMain}
-                    strokeDashoffset={taskOffset}
-                    style={{ transition: "stroke-dashoffset 0.5s ease" }}
-                />
-                </svg>  
+                      {/* Progress Circle */}
+                      <g className="main-progress-group">
+                        <Tooltip content={`Progress: ${progress.percentage}%`} >
+                          <circle
+                            cx={radiusHabit + 10}
+                            cy={radiusHabit + 10}
+                            r={radiusMain}
+                            stroke="var(--cal-purple)"
+                            strokeWidth="8"
+                            fill="transparent"
+                            strokeDasharray={`${(progress.percentage / 100) * circumferenceMain} ${circumferenceMain}`}
+                            strokeDashoffset="0"
+                            style={{ transition: "stroke-dasharray 0.5s ease", pointerEvents: 'visibleStroke' }} // Ensure hover only triggers on the stroke
+                          />
+                        </Tooltip>
+                      </g>
+                  </svg>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
 
-
-
-
-
-
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 };

@@ -43,6 +43,8 @@ const StatsPage: React.FC = () => {
   // Add these for habits
   const [mainProgress, setMainProgress] = useState<{ date: string; percentage: number }[]>([]);
   const [habitsProgress, setHabitsProgress] = useState<{ date: string; habits: { name: string; status: string; color: string }[] }[]>([]);
+  const [hasFetchedHabitsAndTasks, setHasFetchedHabitsAndTasks] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -143,150 +145,188 @@ const StatsPage: React.FC = () => {
 
   useEffect(() => {
     const fetchHabitsAndTasks = async () => {
+      if (isFetching) return; // Prevent execution if already fetching
+    
+      setIsFetching(true);
       console.log("Fetching habits and tasks...");
     
-      // Fetch tasks
-      const tasksQuery = query(collection(db, "tasks"));
-      const tasksSnapshot = await getDocs(tasksQuery);
-      const fetchedTasks = tasksSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Task[];
+      try {
+        // Fetch tasks
+        const tasksQuery = query(collection(db, "tasks"));
+        const tasksSnapshot = await getDocs(tasksQuery);
+        const fetchedTasks = tasksSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Task[];
     
-      // Process task progress data
-      const taskProgress = fetchedTasks.reduce(
-        (acc: { [date: string]: { completed: number; total: number } }, task) => {
-          let taskDate;
-          try {
-            taskDate = new Date(task.date);
-            if (isNaN(taskDate.getTime())) throw new Error("Invalid date");
-          } catch {
-            console.error(`Invalid task date: ${task.date}`);
-            return acc;
-          }
-    
-          const formattedDate = format(taskDate, "M/d/yyyy");
-          if (!acc[formattedDate]) {
-            acc[formattedDate] = { completed: 0, total: 0 };
-          }
-          acc[formattedDate].total += 1;
-          if (task.status === "Completed") {
-            acc[formattedDate].completed += 1;
-          }
-          return acc;
-        },
-        {}
-      );
-    
-      const mainProgress = Object.entries(taskProgress).map(
-        ([date, { completed, total }]) => ({
-          date,
-          percentage: (completed / total) * 100,
-        })
-      );
-    
-    
-      // Fetch habits from habits_reference
-      const habitsRefrenceQuery = query(collection(db, "habits", "main", "habits_refrence"));
-      const habitsRefrenceSnapshot = await getDocs(habitsRefrenceQuery);
-      const fetchedHabits = habitsRefrenceSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Habit[];
-    
-      // Fetch habits_log data
-      const habitsLogsQuery = query(collection(db, "habits", "main", "habits_log"));
-      const habitsLogsSnapshot = await getDocs(habitsLogsQuery);
-      const habitsLogs = habitsLogsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as HabitLog[];
-    
-      // Create new documents in habits_log if empty
-      if (habitsLogs.length === 0) {
-        console.warn("No habits logs found. Creating new logs from habits_reference.");
-        const batch = writeBatch(db);
-    
-        fetchedHabits.forEach((habit) => {
-          const logRef = doc(collection(db, "habits", "main", "habits_log"));
-          batch.set(logRef, {
-            name: habit.name,
-            status: "Incomplete", // Default status
-            color: habit.color,
-            habit_id: habit.habit_id,
-            date: new Date().toISOString(), // Set current date or a specific date if needed
-          });
-        });
-    
-        try {
-          await batch.commit();
-          console.log("Created new habits logs from habits_reference.");
-        } catch (error) {
-          console.error("Error creating new habits logs:", error);
+        if (fetchedTasks.length === 0) {
+          console.warn("No tasks found.");
         }
-      }
     
-      // Map fetched habits for easier lookup by habit_id
-      const habitMap = new Map(fetchedHabits.map((habit) => [habit.habit_id, habit]));
-    
-      // Process habit log data
-      const habitData = habitsLogs.reduce(
-        (acc: { [date: string]: { name: string; status: string; color: string; habit_id: string }[] }, log) => {
-          let logDate;
-          try {
-            if (!log.date) {
-              throw new Error("Missing log date");
+        // Process task progress data
+        const taskProgress = fetchedTasks.reduce(
+          (acc: { [date: string]: { completed: number; total: number } }, task) => {
+            let taskDate;
+            try {
+              taskDate = new Date(task.date);
+              if (isNaN(taskDate.getTime())) throw new Error("Invalid date");
+            } catch {
+              console.error(`Invalid task date: ${task.date}`);
+              return acc;
             }
-            logDate = new Date(log.date);
-            if (isNaN(logDate.getTime())) throw new Error("Invalid date");
-          } catch (error) {
-            console.error(`Invalid log date: ${log.date}`, error);
+    
+            const formattedDate = format(taskDate, "M/d/yyyy");
+            if (!acc[formattedDate]) {
+              acc[formattedDate] = { completed: 0, total: 0 };
+            }
+            acc[formattedDate].total += 1;
+            if (task.status === "Completed") {
+              acc[formattedDate].completed += 1;
+            }
             return acc;
-          }
-      
-          const formattedDate = format(logDate, "M/d/yyyy");
-      
-          // Initialize date entry if it doesn't exist
-          if (!acc[formattedDate]) {
-            acc[formattedDate] = [];
-          }
-      
-          // Find the corresponding habit using habit_id
-          const correspondingHabit = habitMap.get(log.habit_id);
-          if (!correspondingHabit) {
-            console.warn(`Habit not found for habit_id: ${log.habit_id}, habit: ${JSON.stringify(log)}`);
-            return acc;
-          }
-      
-          // Push the habit log to the appropriate date
-          acc[formattedDate].push({
-            name: correspondingHabit.name,
-            status: log.status,
-            color: correspondingHabit.color,
-            habit_id: log.habit_id,
+          },
+          {}
+        );
+    
+        const mainProgress = Object.entries(taskProgress).map(
+          ([date, { completed, total }]) => ({
+            date,
+            percentage: total === 0 ? 0 : (completed / total) * 100,
+          })
+        );
+    
+        // Fetch habits from habits_reference
+        const habitsRefrenceQuery = query(collection(db, "habits", "main", "habits_refrence"));
+        const habitsRefrenceSnapshot = await getDocs(habitsRefrenceQuery);
+        const fetchedHabits = habitsRefrenceSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Habit[];
+    
+        if (fetchedHabits.length === 0) {
+          console.warn("No habits found.");
+        }
+    
+        // Fetch habits_log data
+        const habitsLogsQuery = query(collection(db, "habits", "main", "habits_log"));
+        const habitsLogsSnapshot = await getDocs(habitsLogsQuery);
+        const habitsLogs = habitsLogsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as HabitLog[];
+    
+        // Get the start and end of the current week
+        const startOfWeekDate = startOfWeek(new Date(), { weekStartsOn: 1 });
+        const endOfWeekDate = endOfWeek(new Date(), { weekStartsOn: 1 });
+        const weekDates = eachDayOfInterval({ start: startOfWeekDate, end: endOfWeekDate }).map(date => format(date, "M/d/yyyy"));
+    
+        // Create new documents in habits_log if missing for the week
+        const existingDates = new Set(habitsLogs.map(log => format(new Date(log.date), "M/d/yyyy")));
+        const missingDates = weekDates.filter(date => !existingDates.has(date));
+    
+        if (missingDates.length > 0) {
+          console.warn("Missing habit logs found. Creating new logs for the week.");
+          const batch = writeBatch(db);
+    
+          // Create new logs for each missing date and each habit
+          missingDates.forEach(date => {
+            fetchedHabits.forEach(habit => {
+              // Check if an entry already exists for this habit on this date
+              const existingLogForDate = habitsLogs.some(log => format(new Date(log.date), "M/d/yyyy") === date && log.habit_id === habit.habit_id);
+              
+              // Only create a new log if none exists
+              if (!existingLogForDate) {
+                const logRef = doc(collection(db, "habits", "main", "habits_log"));
+                batch.set(logRef, {
+                  name: habit.name,
+                  status: "Incomplete", // Default status
+                  color: habit.color,
+                  habit_id: habit.habit_id,
+                  date: new Date(date).toISOString(), // Set date for each missing entry
+                });
+              }
+            });
           });
-          return acc;
-        },
-        {}
-      );
     
-      // Convert habitData to an array of objects with date and habits
-      const habitsProgressArray = Object.entries(habitData).map(([date, habits]) => ({
-        date,
-        habits,
-      }));
+          try {
+            await batch.commit();
+            console.log("Created new habits logs for missing dates.");
+            fetchHabitsAndTasks(); // Optionally refetch if needed
+          } catch (error) {
+            console.error("Error creating new habits logs:", error);
+          }
+        } else {
+          // Optionally handle case where no logs are missing
+        }
     
-      // Update state with processed data
-      setHabitsProgress(habitsProgressArray);
-      setMainProgress(mainProgress);
-      console.log("Habits progress:", habitsProgressArray); // Updated to show aggregated data
-      console.log("Main progress:", mainProgress);
+        // Map fetched habits for easier lookup by habit_id
+        const habitMap = new Map(fetchedHabits.map((habit) => [habit.habit_id, habit]));
+    
+        // Process habit log data
+        const habitData = habitsLogs.reduce(
+          (acc: { [date: string]: { name: string; status: string; color: string; habit_id: string }[] }, log) => {
+            let logDate;
+            try {
+              if (!log.date) {
+                throw new Error("Missing log date");
+              }
+              logDate = new Date(log.date);
+              if (isNaN(logDate.getTime())) throw new Error("Invalid date");
+            } catch (error) {
+              console.error(`Invalid log date: ${log.date}`, error);
+              return acc;
+            }
+    
+            const formattedDate = format(logDate, "M/d/yyyy");
+    
+            // Initialize date entry if it doesn't exist
+            if (!acc[formattedDate]) {
+              acc[formattedDate] = [];
+            }
+    
+            // Find the corresponding habit using habit_id
+            const correspondingHabit = habitMap.get(log.habit_id);
+            if (!correspondingHabit) {
+              console.warn(`Habit not found for habit_id: ${log.habit_id}, habit: ${JSON.stringify(log)}`);
+              return acc;
+            }
+    
+            // Push the habit log to the appropriate date
+            acc[formattedDate].push({
+              name: correspondingHabit.name,
+              status: log.status,
+              color: correspondingHabit.color,
+              habit_id: log.habit_id,
+            });
+            return acc;
+          },
+          {}
+        );
+    
+        // Convert habitData to an array of objects with date and habits
+        const habitsProgressArray = Object.entries(habitData).map(([date, habits]) => ({
+          date,
+          habits,
+        }));
+    
+        // Update state with processed data
+        setHabitsProgress(habitsProgressArray);
+        setMainProgress(mainProgress);
+        console.log("Habits progress:", habitsProgressArray); // Updated to show aggregated data
+        console.log("Main progress:", mainProgress);
+      } catch (error) {
+        console.error("Error fetching habits and tasks:", error);
+      } finally {
+        setIsFetching(false); // Reset fetching flag
+      }
     };
     
+    if (!hasFetchedHabitsAndTasks) {
   
-    fetchHabitsAndTasks();
-  }, []);
-  
+      fetchHabitsAndTasks();
+      setHasFetchedHabitsAndTasks(true); // Set the state to true after fetching
+    }
+  }, [hasFetchedHabitsAndTasks]);
   
   
   

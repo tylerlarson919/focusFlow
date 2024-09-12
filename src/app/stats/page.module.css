@@ -15,7 +15,7 @@
     background-color: var(--header-bg);
     width: 100vw;
   }
-.statsChart, .rowTwo {
+.statsChart {
     background-color: var(--dark2);
     padding: 15px;
     border-radius: 15px;
@@ -24,6 +24,16 @@
     display: flex;
     flex-direction: column;
     gap: 15px;
+}
+.rowTwo {
+  background-color: var(--dark2);
+  padding: 15px;
+  border-radius: 15px;
+  width: 95%;
+  height: 35%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .topContent {
