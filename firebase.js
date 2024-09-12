@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, doc, writeBatch } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; // Import Firebase Storage
 
 
@@ -19,7 +19,10 @@ const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
 const db = getFirestore(app);
 const tasksCollection = collection(db, "tasks");
-
+const habitsCollection = collection(db, "habits");
+const mainDocRef = doc(db, "habits", "main");
+const habitsRefrenceCollection = collection(mainDocRef, "habits_refrence");
+const habitsLogCollection = collection(mainDocRef, "habits_log");
 
 
 // Firestore Collections and Functions
@@ -53,7 +56,52 @@ export const getSessions = async () => {
   }
 };
 
+const createMissingHabitsInFirestore = async (habits) => {
+  const batch = writeBatch(db);
 
+  habits.forEach(habit => {
+    // Check if habit_id is defined
+    if (!habit.habit_id) {
+      console.warn(`Skipping habit with undefined habit_id: ${habit.name}, Structure: ${JSON.stringify(habit)}`);
+      return; // Skip this habit
+    }
+
+    // Generate a new document reference for each habit
+    const habitDocRef = doc(collection(db, "habits", "main", "habits_log"));
+
+    // Set the document with the habit details
+    batch.set(habitDocRef, {
+      name: habit.name,
+      status: habit.status,
+      color: habit.color,
+      date: habit.date,
+      habit_id: habit.habit_id,
+    });
+  });
+
+  try {
+    await batch.commit();
+    console.log('Missing habits created successfully.');
+  } catch (error) {
+    console.error('Error creating missing habits:', error);
+  }
+};
+
+
+
+
+
+
+
+
+export const getHabits = async () => {
+  try {
+    const querySnapshot = await getDocs(habitsLogCollection);
+    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (e) {
+    console.error("Error getting habits: ", e);
+  }
+};
 
 export const getTasks = async () => {
   try {
@@ -71,4 +119,4 @@ export const getTasks = async () => {
 
 
 // Export the initialized Firebase app, auth, and db
-export { app, db, storage, tasksCollection };
+export { app, db, storage, tasksCollection, habitsCollection, createMissingHabitsInFirestore };
