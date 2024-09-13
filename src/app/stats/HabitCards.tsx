@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardBody, CardFooter } from '@nextui-org/react';
+import { Card, CardBody, CardFooter, Button } from '@nextui-org/react';
 import {
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
-  DropdownItem
+  DropdownItem,
 } from "@nextui-org/dropdown";
 import { createOrUpdateHabitInFirestore, getHabitLogStatus } from '../../../firebase'; // Import the function
 
@@ -14,6 +14,7 @@ interface Habit {
   color: string;
   habit_id: string;
   status: string;
+  emoji: string;
 }
 
 interface HabitCardProps {
@@ -33,6 +34,7 @@ const HabitCards: React.FC<HabitCardProps> = ({ habits }) => {
           return {
             ...habit,
             status: status || 'incomplete', // Default to 'incomplete' if no log entry
+            emoji: habit.emoji,
           };
         }));
         console.log('Fetched statuses:', updatedHabits);
@@ -73,16 +75,28 @@ const HabitCards: React.FC<HabitCardProps> = ({ habits }) => {
   };
 
   return (
-    <div className="flex flex-row gap-4 overflow-x-auto p-4">
-      {habitsState.map((habit) => (
-        <Card key={habit.id} isFooterBlurred radius="lg" className="border-none">
-          <CardBody>
-            <div style={{ color: habit.color }}>{habit.name}</div>
-            <Dropdown>
+<div className="grid grid-cols-4 gap-4 max-h-48 overflow-visible pt-2">
+{habitsState.map((habit) => (
+        <Card key={habit.id} isBlurred radius="lg" className="border-none h-full w-full mb-0">
+          <CardBody className="h-fit min-h-fit p-0 pl-3 pr-3 pt-2 pb-3 gap-1">
+            <div className="flex flex-row gap-1">
+              <div>
+              {habit.emoji || "😀"}
+              </div>
+              <div style={{ color: habit.color }}>{habit.name}</div>
+            </div>
+            <Dropdown
+            >
               <DropdownTrigger>
-                <button className="text-sm">
+                <Button
+                  variant="faded"
+                  color={habit.status === 'complete' ? 'success' : 'default'}
+
+
+                  className="text-sm w-24"
+                >
                   {habit.status === 'complete' ? 'Done' : 'Not Done'}
-                </button>
+                </Button>
               </DropdownTrigger>
               <DropdownMenu
                 aria-label="Select status"
@@ -96,9 +110,7 @@ const HabitCards: React.FC<HabitCardProps> = ({ habits }) => {
               </DropdownMenu>
             </Dropdown>
           </CardBody>
-          <CardFooter>
-            {/* Footer content if needed */}
-          </CardFooter>
+
         </Card>
       ))}
     </div>

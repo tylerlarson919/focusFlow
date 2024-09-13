@@ -222,27 +222,29 @@ useEffect(() => {
   return (
     <div className={styles.leftTopFrame}>
       <div className={styles.tableContainer}>
-      <ScrollShadow className="w-[100%] h-[100%]" >
-      <Table className={styles.table} onRowAction={handleRowAction} color="secondary" selectionMode="single" aria-label="Session logs" removeWrapper>
-          <TableHeader columns={columns}>
-            {(column) => (
-              <TableColumn key={column.key}>{column.label}</TableColumn>
-            )}
-          </TableHeader>
-          <TableBody items={paginatedSessions} emptyContent="No rows to display.">
-            {(item) => (
-              <TableRow key={item.id}>
-                <TableCell>
-                  {item.endDate ? `${item.startDate} - ${item.endDate.split(', ')[1]}` : `${item.startDate} -`}
-                </TableCell>
-                <TableCell>{item.length}</TableCell>
-                <TableCell>
-                  {item.name && item.name.length > 60 ? `${item.name.slice(0, 60)}...` : item.name || ''}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+      <ScrollShadow className={styles.scrollContainer} >
+        <div className="dsf">
+        <Table className={styles.table} onRowAction={handleRowAction} color="secondary" selectionMode="single" aria-label="Session logs" removeWrapper>
+            <TableHeader columns={columns}>
+              {(column) => (
+                <TableColumn key={column.key}>{column.label}</TableColumn>
+              )}
+            </TableHeader>
+            <TableBody items={paginatedSessions} emptyContent="No rows to display.">
+              {(item) => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    {item.endDate ? `${item.startDate} - ${item.endDate.split(', ')[1]}` : `${item.startDate} -`}
+                  </TableCell>
+                  <TableCell>{item.length}</TableCell>
+                  <TableCell>
+                    {item.name && item.name.length > 60 ? `${item.name.slice(0, 60)}...` : item.name || ''}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
         </ScrollShadow>
         <div className="flex w-full justify-center absolute bottom-5 right-1">
           <Pagination

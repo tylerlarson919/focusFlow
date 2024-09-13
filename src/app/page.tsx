@@ -15,6 +15,7 @@ import HeaderMain from './components/header';
 import HabitProgressCircle from './stats/HabitProgressCircle'
 import { format, eachDayOfInterval, subDays, addDays } from 'date-fns';
 import HabitCards from './stats/HabitCards';
+import { ScrollShadow } from '@nextui-org/react';
 
 // Define the type for session logs
 interface Session {
@@ -33,6 +34,7 @@ interface Habit {
   status: string;
   color: string;
   habit_id: string;
+  emoji: string;
 }
 
 interface HabitLog {
@@ -40,6 +42,7 @@ interface HabitLog {
   date: string; // Ensure this is a date string in your Firestore documents
   habit_id: string;
   status: string;
+  emoji: string;
 }
 
 interface Task {
@@ -47,6 +50,7 @@ interface Task {
   completedAt: string; // or Date if you prefer
   status: string;
   date: string;
+  emoji: string;
 }
 
 
@@ -60,7 +64,7 @@ const Page: React.FC = () => {
 
   // Add these for habits
   const [mainProgress, setMainProgress] = useState<{ date: string; percentage: number }[]>([]);
-  const [habitsProgress, setHabitsProgress] = useState<{ date: string; habits: { name: string; status: string; color: string; habit_id?: string}[] }[]>([]);
+  const [habitsProgress, setHabitsProgress] = useState<{ date: string; habits: { name: string; status: string; color: string; habit_id?: string; emoji: string;}[] }[]>([]);
   const [hasFetchedHabitsAndTasks, setHasFetchedHabitsAndTasks] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [todayHabits, setTodayHabits] = useState<Habit[]>([]);
@@ -166,13 +170,13 @@ useEffect(() => {
       const existingDates = new Set(habitsLogs.map(log => format(new Date(log.date), "M/d/yyyy")));
       const habitMap = new Map(fetchedHabits.map(habit => [habit.habit_id, habit]));
 
-      const habitData = weekDates.reduce((acc: { [date: string]: { name: string; status: string; color: string; habit_id: string }[] }, date) => {
+      const habitData = weekDates.reduce((acc: { [date: string]: { name: string; status: string; color: string; habit_id: string, emoji: string; }[] }, date) => {
         const logsForDate = habitsLogs.filter(log => format(addDays(new Date(log.date), 1), "M/d/yyyy") === date);
         const habitsForDate = fetchedHabits.map(habit => {
           const logForHabit = logsForDate.find(log => log.habit_id === habit.habit_id);
           return logForHabit
             ? { ...logForHabit, name: habit.name, color: habit.color }
-            : { name: habit.name, status: "Incomplete", color: habit.color, habit_id: habit.habit_id };
+            : { name: habit.name, status: "Incomplete", color: habit.color, habit_id: habit.habit_id, emoji: habit.emoji };
         });
         acc[date] = habitsForDate;
         return acc;
@@ -207,6 +211,7 @@ useEffect(() => {
         status: habit.status,
         color: habit.color,
         habit_id: habit.habit_id || '',
+        emoji: habit.emoji,
       }));
       
       setTodayHabits(habitsWithId);
@@ -230,12 +235,15 @@ useEffect(() => {
           />
         </div>
         <div className={styles.habitFrameRight}>
-          <div className="flex flex-col">
-            <div className={styles.headingText}>Habits</div>
-            <div className={styles.habitCards}>
-            <HabitCards habits={todayHabits} />
+
+            <div className="flex flex-col">
+              <div className={styles.headingText}>Habits</div>
+              <ScrollShadow className="w-full h-fit">
+                <div className={styles.habitCards}>
+                  <HabitCards habits={todayHabits} />
+                </div>
+                </ScrollShadow>
             </div>
-          </div>
         </div>
       </div>
     <div className={styles.container}>

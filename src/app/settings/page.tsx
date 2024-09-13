@@ -1,6 +1,6 @@
 // SettingsPage.tsx
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@nextui-org/table";
 import { Button, Textarea } from "@nextui-org/react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@nextui-org/modal";
@@ -10,6 +10,8 @@ import styles from './page.module.css';
 import { FaTrash } from "react-icons/fa";
 import HeaderMain from '../components/header';
 import { v4 as uuidv4 } from 'uuid'; // Import UUID library for generating unique IDs
+import data from '@emoji-mart/data'
+import Picker from '@emoji-mart/react'
 
 const db = getFirestore(app);
 
@@ -19,11 +21,16 @@ const SettingsPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const mainDocRef = doc(db, "habits", "main");
-  const habitsCollection = collection(db, "habits");
   const habitsRefrenceCollection = collection(mainDocRef, "habits_refrence");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const emojiPickerRef = useRef(null); // Ref to handle hover outside
 
 
 
+
+
+  
   const fetchHabits = async () => {
     try {
       const habitDocs = await getDocs(habitsRefrenceCollection); // Use habitsRefrenceCollection
@@ -39,12 +46,14 @@ const SettingsPage: React.FC = () => {
 
   const handleRowClick = (habit: any) => {
     setSelectedHabit(habit);
+    setSelectedEmoji(habit.emoji || ""); // Set the emoji from the habit data
     setIsModalOpen(true);
   };
-
+  
   const handleClose = async () => {
     setSelectedHabit(null);
     setIsModalOpen(false);
+    setShowEmojiPicker(false);
     await fetchHabits(); // Re-fetch data to display on the table
   };
   
@@ -60,6 +69,7 @@ const SettingsPage: React.FC = () => {
           name: habit.name,
           description: habit.description,
           color: habit.color,
+          emoji: selectedEmoji,
         });
         console.log("Updated habit:", habit);
       } else {
@@ -68,7 +78,9 @@ const SettingsPage: React.FC = () => {
           name: habit.name,
           description: habit.description,
           color: habit.color,
+          emoji: selectedEmoji,
           habit_id: uuidv4(),
+          
         });
         console.log("Created new habit:", habit);
       }
@@ -80,9 +92,32 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+
+  const handleEmojiSelect = (emoji: any) => {
+    setSelectedEmoji(emoji.native); // Set selected emoji
+    setShowEmojiPicker(false); // Close picker after selecting
+  };
+
+  const handleOutsideClick = (e: MouseEvent) => {
+    if (emojiPickerRef.current && !(emojiPickerRef.current as any).contains(e.target)) {
+      setShowEmojiPicker(false); // Close picker only on click outside
+    }
+  };
+  
+
+
   useEffect(() => {
-    fetchHabits(); // Fetch habits on initial render
+    fetchHabits();
   }, []);
+
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleOutsideClick); // Listen for clicks outside the emoji picker
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick); // Cleanup on unmount
+    };
+  }, [showEmojiPicker]);
+
 
   return (
       
@@ -140,7 +175,7 @@ const SettingsPage: React.FC = () => {
 
 
       {selectedHabit && (
-        <Modal placement="center" isDismissable={false} isKeyboardDismissDisabled={false} size="4xl" isOpen={isModalOpen} onOpenChange={handleClose}>
+        <Modal className="overflow-visible" placement="center" isDismissable={false} isKeyboardDismissDisabled={false} size="4xl" isOpen={isModalOpen} onOpenChange={handleClose}>
         <ModalContent>
         <ModalHeader className="items-center flex flex-row gap-3 text-3xl">
           {selectedHabit?.id && (
@@ -160,6 +195,24 @@ const SettingsPage: React.FC = () => {
               }}
             />
           )}
+          <div className="relative">
+            <button
+              className="cursor-pointer"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            >
+              {selectedEmoji || "😀"} {/* Show selected emoji or default */}
+            </button>
+            {showEmojiPicker && (
+              <div 
+                ref={emojiPickerRef} 
+                className="absolute z-20"
+              >
+                <Picker
+                data={data}
+                onEmojiSelect={handleEmojiSelect} />
+              </div>
+            )}
+          </div>
           {selectedHabit?.name ? 'Edit Habit' : 'New Habit'} {/* Header changes based on if editing or creating */}
           <div className="relative items-center justify-center">
             <div
