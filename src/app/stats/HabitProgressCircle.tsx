@@ -71,7 +71,7 @@ const HabitProgressCircle: React.FC<HabitProgressCircleProps> = ({
           <button onClick={handlePrev} className="mr-2">
             <FaArrowLeft />
           </button>
-          <h3 className="text-base font-semibold">
+          <h3 className="text-base font-semibold text-center">
             {format(currentDate, 'MMM d')} - {format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'MMM d')}
           </h3>
           <button onClick={handleNext} className="ml-2">
@@ -84,8 +84,8 @@ const HabitProgressCircle: React.FC<HabitProgressCircleProps> = ({
           <button onClick={handlePrev} className="mr-2">
             <FaArrowLeft />
           </button>
-          <h3 className="text-base font-semibold">
-            {format(currentDate, 'MMM d, yyyy')}
+          <h3 className="text-base font-semibold text-center">
+            {format(currentDate, 'eee, MMM d')}
           </h3>
           <button onClick={handleNext} className="ml-2">
             <FaArrowRight />

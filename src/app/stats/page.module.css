@@ -70,3 +70,40 @@
       padding: 10px; /* Reduce padding on smaller screens */
     }
   }
+
+  .gridColumns {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding-top: 8px;
+    overflow: visible;
+    gap: 16px;
+    max-height: 192px;
+    height: fit-content;
+
+  }
+
+  @media screen and (max-width: 1110px) {
+    .gridColumns {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+
+
+  @media screen and (max-width: 715px) {
+    .gridColumns {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media screen and (max-width: 510px) {
+    .gridColumns {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media screen and (max-width: 310px) {
+    .gridColumns {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+  }

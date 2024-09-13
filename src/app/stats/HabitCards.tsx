@@ -7,6 +7,7 @@ import {
   DropdownItem,
 } from "@nextui-org/dropdown";
 import { createOrUpdateHabitInFirestore, getHabitLogStatus } from '../../../firebase'; // Import the function
+import styles from './page.module.css';
 
 interface Habit {
   id: string;
@@ -75,7 +76,7 @@ const HabitCards: React.FC<HabitCardProps> = ({ habits }) => {
   };
 
   return (
-<div className="grid grid-cols-4 gap-4 max-h-48 overflow-visible pt-2">
+<div className={styles.gridColumns}>
 {habitsState.map((habit) => (
         <Card key={habit.id} isBlurred radius="lg" className="border-none h-full w-full mb-0">
           <CardBody className="h-fit min-h-fit p-0 pl-3 pr-3 pt-2 pb-3 gap-1">
@@ -83,7 +84,16 @@ const HabitCards: React.FC<HabitCardProps> = ({ habits }) => {
               <div>
               {habit.emoji || "😀"}
               </div>
-              <div style={{ color: habit.color }}>{habit.name}</div>
+              <div 
+                style={{ 
+                  color: habit.color, 
+                  whiteSpace: 'nowrap',  // Prevents text wrapping
+                  overflow: 'hidden',    // Hides the overflowed text
+                  textOverflow: 'ellipsis'  // Displays "..." when text overflows
+                }}
+              >
+                {habit.name}
+              </div>           
             </div>
             <Dropdown
             >
@@ -93,7 +103,7 @@ const HabitCards: React.FC<HabitCardProps> = ({ habits }) => {
                   color={habit.status === 'complete' ? 'success' : 'default'}
 
 
-                  className="text-sm w-24"
+                  className="text-sm w-24 h-6"
                 >
                   {habit.status === 'complete' ? 'Done' : 'Not Done'}
                 </Button>
