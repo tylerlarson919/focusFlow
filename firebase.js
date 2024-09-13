@@ -109,7 +109,7 @@ export const createOrUpdateHabitInFirestore = async (habit) => {
 
 export const getHabitLogStatus = async (habitId) => {
   try {
-    const currentDate = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+    const currentDate = subHours(new Date(), 4).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
     const habitQuery = query(
       collection(db, 'habits/main/habits_log'),
       where('habit_id', '==', habitId),

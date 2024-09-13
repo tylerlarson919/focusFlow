@@ -32,22 +32,26 @@ const HabitCards: React.FC<HabitCardProps> = ({ habits }) => {
   useEffect(() => {
     const fetchHabitsStatus = async () => {
       try {
-        const updatedHabits = await Promise.all(habits.map(async habit => {
-          const status = await getHabitLogStatus(habit.habit_id);
-          return {
-            ...habit,
-            status: status || 'incomplete', // Default to 'incomplete' if no log entry
-            emoji: habit.emoji,
-          };
-        }));
+        const updatedHabits = await Promise.all(
+          habits.map(async habit => {
+            // Ensure you're fetching the status for the right habit_id and current date
+            const status = await getHabitLogStatus(habit.habit_id);
+            return {
+              ...habit,
+              status: status || 'incomplete', // Default to 'incomplete' if no log entry
+            };
+          })
+        );
         console.log('Fetched statuses:', updatedHabits);
         setHabitsState(updatedHabits);
       } catch (error) {
         console.error('Error fetching habits statuses:', error);
-        setHabitsState(habits.map(habit => ({ ...habit, status: 'incomplete' })));
+        setHabitsState(
+          habits.map(habit => ({ ...habit, status: 'incomplete' }))
+        );
       }
     };
-  
+
     fetchHabitsStatus();
   }, [habits]);
 
