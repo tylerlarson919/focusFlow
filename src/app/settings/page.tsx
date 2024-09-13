@@ -12,6 +12,7 @@ import HeaderMain from '../components/header';
 import { v4 as uuidv4 } from 'uuid'; // Import UUID library for generating unique IDs
 import data from '@emoji-mart/data'
 import Picker from '@emoji-mart/react'
+import { size } from "lodash";
 
 const db = getFirestore(app);
 
@@ -39,6 +40,7 @@ const SettingsPage: React.FC = () => {
         ...doc.data(),
       }));
       setHabits(fetchedHabits);
+      console.log("Fetched habits:", fetchedHabits);
     } catch (error) {
       console.error("Error fetching habits:", error);
     }
@@ -147,12 +149,24 @@ const SettingsPage: React.FC = () => {
           </div>
           <Table selectionMode="single" color="secondary" removeWrapper aria-label="Habits Table">
             <TableHeader>
+              <TableColumn></TableColumn>
               <TableColumn>Name</TableColumn>
               <TableColumn>Color</TableColumn>
             </TableHeader>
             <TableBody>
               {habits.map((habit) => (
                 <TableRow key={habit.id} onClick={() => handleRowClick(habit)}>
+                  <TableCell>
+                  <div 
+                      style={{
+                        fontSize: "30px",
+                        height: "30px",
+                        display: "flex",
+                        alignItems: "center", 
+                        justifyContent: "flex-end",
+                      }}
+                    >{habit.emoji}</div>
+                    </TableCell>
                   <TableCell>{habit.name}</TableCell>
                   <TableCell>
                     <div 

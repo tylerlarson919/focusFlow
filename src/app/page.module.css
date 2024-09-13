@@ -29,23 +29,21 @@ padding: 20px;
   flex-direction: row;
   gap: 20px;
 }
-.habitFrameLeft, .habitFrameRight {
-  background-color: var(--dark2);
-  border-radius: 60px;
-  padding: 20px;
-}
 .headingText {
   font-size: 24px;
   font-weight: bold;
+  padding-left: 30px;
 }
 
 .habitFrameLeft {
   width: 20%;
+  border-radius: 60px;
+
 }
 .habitFrameRight {
   width: 80%;
-  padding-left: 30px;
-  padding-right: 30px;
+  border-radius: 60px;
+
 
 }
 
@@ -71,6 +69,12 @@ padding: 20px;
     right: 0;
     
   }
+  .scrollShado {
+    width: 100%;
+    height: fit-content;
+    padding-left: 20px;
+    padding-right: 20px;
+   }
   .paddingBottom {
     padding-bottom: 15px;
   }
@@ -78,10 +82,17 @@ padding: 20px;
     .container {
       flex-direction: column;
       height: auto;
+      padding-top: 20px;
       
     }
     .leftFrame, .rightFrame {
       width: 100%;
+    }
+    .habitFrameLeft {
+      padding-top: 20px;
+    }
+    .habitFrame {
+      gap: 0;
     }
   }
 
@@ -93,12 +104,29 @@ padding: 20px;
     .habitFrameRight, .habitFrameLeft {
       width: 100%;
     }
+
+   .scrollShado {
+    height: 180px;
+   }
     .mainContainer {
       padding: 0;
     }
     .habitFrameLeft {
       height: 200px;
     }
+  }
+
+  @media screen and (max-width: 510px) {
+    .scrollShado {
+      height: 250px;
+     }
+     .headingText {
+      padding-left: 20px;
+     }
+     .scrollShado {
+      padding-left: 10px;
+      padding-right: 10px;
+     }
   }
 
   .header {

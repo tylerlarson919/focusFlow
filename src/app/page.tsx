@@ -236,9 +236,9 @@ useEffect(() => {
         </div>
         <div className={styles.habitFrameRight}>
 
-            <div className="flex flex-col">
+            <div className="flex flex-col justify-items-stretch">
               <div className={styles.headingText}>Habits</div>
-              <ScrollShadow className="w-full h-fit">
+              <ScrollShadow className={styles.scrollShado}>
                 <div className={styles.habitCards}>
                   <HabitCards habits={todayHabits} />
                 </div>
