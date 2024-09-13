@@ -15,12 +15,35 @@ const HabitProgressCircle: React.FC<HabitProgressCircleProps> = ({
   habitsProgress,
   moduleType,
 }) => {
-  const [currentDate, setCurrentDate] = useState(() => moduleType === "week" ? startOfWeek(new Date(), { weekStartsOn: 1 }) : startOfDay(new Date()));
+  const getUTC4Date = () => {
+    const now = new Date();
+    const utcOffset = now.getTimezoneOffset() / 60; // Get current UTC offset in hours
+    const utc4Offset = +4; // UTC-4
+    const difference = utcOffset - utc4Offset; 
+  
+    
+    now.setHours(now.getHours() + difference); // Adjust the current time to UTC-4
+    return now;
+  };
+  
+  const [currentDate, setCurrentDate] = useState(() => 
+    moduleType === "week" 
+      ? startOfWeek(getUTC4Date(), { weekStartsOn: 1 }) 
+      : startOfDay(getUTC4Date())
+  );
 
   useEffect(() => {
     if (mainProgress.length > 0) {
       const latestDate = new Date(mainProgress[mainProgress.length - 1].date);
-      setCurrentDate(moduleType === "week" ? startOfWeek(latestDate, { weekStartsOn: 1 }) : latestDate);
+      
+      // Check if the latest date is different from the current date before updating
+      const formattedLatestDate = format(latestDate, 'M/d/yyyy');
+
+      const formattedCurrentDate = format(currentDate, 'M/d/yyyy');
+
+      if (formattedLatestDate !== formattedCurrentDate) {
+        setCurrentDate(moduleType === "week" ? startOfWeek(currentDate, { weekStartsOn: 1 }) : currentDate);
+      }
     }
   }, [mainProgress, moduleType]);
   

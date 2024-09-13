@@ -76,7 +76,7 @@
 
   .gridColumns {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     padding-top: 8px;
     overflow: visible;
     gap: 16px;
@@ -86,11 +86,7 @@
 
   }
 
-  @media screen and (max-width: 1110px) {
-    .gridColumns {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
+
 
 
 

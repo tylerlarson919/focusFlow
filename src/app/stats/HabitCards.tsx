@@ -42,7 +42,6 @@ const HabitCards: React.FC<HabitCardProps> = ({ habits }) => {
             };
           })
         );
-        console.log('Fetched statuses:', updatedHabits);
         setHabitsState(updatedHabits);
       } catch (error) {
         console.error('Error fetching habits statuses:', error);
@@ -63,8 +62,6 @@ const HabitCards: React.FC<HabitCardProps> = ({ habits }) => {
       return;
     }
 
-    console.log(`Updating habit ${id} to status ${newStatus}`);
-
     try {
       await createOrUpdateHabitInFirestore({ ...updatedHabit, status: newStatus });
 
@@ -84,7 +81,7 @@ const HabitCards: React.FC<HabitCardProps> = ({ habits }) => {
   return (
 <div className={styles.gridColumns}>
 {habitsState.map((habit) => (
-        <Card key={habit.id}  radius="lg" className="bg-[var(--dark2)] border-none h-full w-full mb-0">
+        <Card key={habit.id}  radius="lg" className="bg-[var(--dark2)] border-none h-28 w-full mb-0">
           <CardBody  className="h-fit min-h-fit p-0 pl-3 pr-3 pt-2 pb-3 gap-1">
             <div className="flex flex-row gap-1">
               <div>

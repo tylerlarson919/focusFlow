@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Nunito } from 'next/font/google';
 import "./globals.css";
 import {Providers} from "./providers";
 import { NextUIProvider } from "@nextui-org/react"; 
 
 
 
-const inter = Inter({ subsets: ["latin"] });
-
+const nunito = Nunito({ 
+  subsets: ["latin"],
+  weight: ["400", "700"] // Specify font weights (normal and bold)
+});
 export const metadata: Metadata = {
   title: "FocusFlow",
   description: "Grind time baby",
@@ -21,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} dark`}>
+      <body className={`${nunito.className} dark`}>
         <NextUIProvider>
           <Providers>
             {children}

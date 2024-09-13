@@ -11,6 +11,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        // Replace 'Inter' with the font you want
+        sans: ['"PT Sans"', 'ui-sans-serif', 'system-ui'],
+      },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "gradient-conic":
