@@ -7,6 +7,8 @@ import {
   DropdownItem,
 } from "@nextui-org/dropdown";
 import { createOrUpdateHabitInFirestore, getHabitLogStatus } from '../../../firebase'; // Import the function
+import { subHours } from 'date-fns';
+
 import styles from './page.module.css';
 
 interface Habit {

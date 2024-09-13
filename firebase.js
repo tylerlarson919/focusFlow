@@ -1,6 +1,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { query, where, getFirestore, collection, addDoc, getDocs, getDoc, doc, writeBatch, setDoc } from "firebase/firestore";
+import { subHours } from 'date-fns';
+
 import { getStorage } from "firebase/storage"; // Import Firebase Storage
 
 
@@ -59,7 +61,7 @@ export const getSessions = async () => {
 export const createOrUpdateHabitInFirestore = async (habit) => {
   try {
     const { id, ...habitData } = habit;
-    const currentDate = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+    const currentDate = subHours(new Date(), 4).toISOString().split('T')[0];  // Get current date in YYYY-MM-DD format
 
     // Query the habits_log collection to find if a document with the same habit_id and date exists
     const habitQuery = query(
