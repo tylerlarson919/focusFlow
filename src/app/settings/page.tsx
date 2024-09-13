@@ -149,7 +149,7 @@ const SettingsPage: React.FC = () => {
           </div>
           <Table selectionMode="single" color="secondary" removeWrapper aria-label="Habits Table">
             <TableHeader>
-              <TableColumn></TableColumn>
+              <TableColumn>&nbsp;</TableColumn>
               <TableColumn>Name</TableColumn>
               <TableColumn>Color</TableColumn>
             </TableHeader>
