@@ -31,7 +31,7 @@ const HeaderMain: React.FC<HeaderMainProps> = ({ className }) => {
           />
           <div className="z-50 flex-grow" />
         </div>
-        <NavbarMenu className={`z-50 absolute left-0 h-full transition-width duration-300 ${isMenuOpen ? "w-64" : "w-0"} overflow-hidden`}>
+        <NavbarMenu className={`z-50 absolutes left-0 bottom-0 h-full transition-width duration-300 ${isMenuOpen ? "w-64" : "w-0"} overflow-hidden`}>
         {menuItems.map((item, index) => (
             <NavbarMenuItem key={`${item}-${index}`} className="w-full">
                 <Link

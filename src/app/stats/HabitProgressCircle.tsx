@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import { format, startOfWeek, addWeeks, subWeeks, eachDayOfInterval, endOfWeek, startOfDay, addDays, subDays } from 'date-fns';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import { Tooltip } from "@nextui-org/react";
+import Styles from './page.module.css';
+
 
 interface HabitProgressCircleProps {
   mainProgress: { date: string; percentage: number }[];
@@ -88,9 +90,9 @@ const HabitProgressCircle: React.FC<HabitProgressCircleProps> = ({
   const circumferenceMain = 2 * Math.PI * radiusMain;
 
   return (
-    <div className="flex flex-col items-center w-full h-full">
+    <div className="flex flex-col items-center w-full h-full gap-4 pt-4">
       {moduleType === "week" && (
-        <div className="flex items-center mb-4">
+        <div className="flex items-center">
           <button onClick={handlePrev} className="mr-2">
             <FaArrowLeft />
           </button>
@@ -115,7 +117,7 @@ const HabitProgressCircle: React.FC<HabitProgressCircleProps> = ({
           </button>
         </div>
       )}
-      <div className="flex justify-between w-full h-full pr-6 pl-6">
+      <div className={Styles.weekGrids}>
         {(moduleType === "week" ? weekDates : [currentDate]).map((date) => {
           const progress = getProgressForDate(date);
           const habits = getHabitsForDate(date);
@@ -123,7 +125,7 @@ const HabitProgressCircle: React.FC<HabitProgressCircleProps> = ({
           const taskOffset = circumferenceMain - (progress.percentage / 100) * circumferenceMain;
 
           return (
-            <div key={format(date, 'M/d/yyyy')} className={`relative flex flex-col items-center w-full h-full justify-center`}>
+            <div key={format(date, 'M/d/yyyy')} className={`relative flex flex-col items-center w-40 h-32 justify-center`}>
               {/* Date Text */}
               <div className="text-center text-s">
                 {moduleType === "week" ? (
@@ -132,7 +134,7 @@ const HabitProgressCircle: React.FC<HabitProgressCircleProps> = ({
                   </>
                 ) : (
                   <>
-                    {format(date, 'MMM d')} <br /> {format(date, 'yyyy')}
+                    {format(date, 'MMM d')}
                   </>
                 )}
               </div>
