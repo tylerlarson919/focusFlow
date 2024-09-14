@@ -34,7 +34,9 @@ interface Habit {
   status: string;
   color: string;
   habit_id: string;
-  emoji: string;
+  emoji: string; 
+  frequency: string;
+  days_of_week: string;
 }
 
 interface HabitLog {
@@ -43,6 +45,8 @@ interface HabitLog {
   habit_id: string;
   status: string;
   emoji: string;
+  frequency: string;
+  days_of_week: string;
 }
 
 interface Task {
@@ -64,18 +68,55 @@ const Page: React.FC = () => {
 
   // Add these for habits
   const [mainProgress, setMainProgress] = useState<{ date: string; percentage: number }[]>([]);
-  const [habitsProgress, setHabitsProgress] = useState<{ date: string; habits: { name: string; status: string; color: string; habit_id?: string; emoji: string;}[] }[]>([]);
+  const [habitsProgress, setHabitsProgress] = useState<{ date: string; habits: { name: string; status: string; color: string; habit_id?: string; emoji: string; frequency: string; days_of_week: string; }[] }[]>([]);
   const [hasFetchedHabitsAndTasks, setHasFetchedHabitsAndTasks] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [todayHabits, setTodayHabits] = useState<Habit[]>([]);
 
+
+
+
+  const getDaysOfWeek = (daysOfWeek: string[]): number[] => {
+    // Map days_of_week string to numbers (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+    const daysMap: { [key: string]: number } = {
+      Sunday: 0,
+      Monday: 1,
+      Tuesday: 2,
+      Wednesday: 3,
+      Thursday: 4,
+      Friday: 5,
+      Saturday: 6,
+    };
+    return daysOfWeek.map(day => daysMap[day]);
+  };
+  
+  const getTasksForDays = (habits: Habit[], tasks: Task[]): Task[] => {
+    const tasksForDays: Task[] = [];
+    const today = new Date();
+    const todayDayOfWeek = today.getDay();
+  
+    habits.forEach(habit => {
+      const habitDays = getDaysOfWeek(JSON.parse(habit.frequency).days_of_week);
+  
+      tasks.forEach(task => {
+        const taskDate = new Date(task.date);
+        const taskDayOfWeek = taskDate.getDay();
+  
+        if (habitDays.includes(taskDayOfWeek)) {
+          tasksForDays.push(task);
+        }
+      });
+    });
+  
+    return tasksForDays;
+  };
 
   // Handle session selection
   const handleSessionSelect = (session: Session | null) => {
     setSelectedSession(session); // Set the selected session
     setSelectedTask(null); // Clear any selected task to avoid conflicts
     onOpen(); // Open the modal when a session is selected
-};
+  };
 
 const OpenNewTaskModal = (isClicked: boolean, date: Date) => {
   if (isClicked) {
@@ -170,22 +211,51 @@ useEffect(() => {
       const existingDates = new Set(habitsLogs.map(log => format(new Date(log.date), "M/d/yyyy")));
       const habitMap = new Map(fetchedHabits.map(habit => [habit.habit_id, habit]));
 
-      const habitData = weekDates.reduce((acc: { [date: string]: { name: string; status: string; color: string; habit_id: string, emoji: string; }[] }, date) => {
-        const logsForDate = habitsLogs.filter(log => format(addDays(new Date(log.date), 1), "M/d/yyyy") === date);
-        const habitsForDate = fetchedHabits.map(habit => {
-          const logForHabit = logsForDate.find(log => log.habit_id === habit.habit_id);
-          return logForHabit
-            ? { ...logForHabit, name: habit.name, color: habit.color }
-            : { name: habit.name, status: "Incomplete", color: habit.color, habit_id: habit.habit_id, emoji: habit.emoji };
-        });
-        acc[date] = habitsForDate;
-        return acc;
-      }, {});
+        // Process habit log data
+        const habitData = weekDates.reduce((acc: { [date: string]: { name: string; status: string; color: string; habit_id: string; emoji: string; frequency: string; days_of_week: string; }[] }, date) => {
+          // Check if the date matches the habit frequency and days_of_week
+          const isValidDate = (date: Date, habit: Habit): boolean => {
+            const dayOfWeek = new Date(date).getDay() ; // Get the day of the week (1 = Monday, 7 = Sunday)
+            const daysOfWeek = habit.days_of_week.split(',').map(Number); // Convert to array of numbers
+            const today = format(date, 'M/d/yyyy');
+          
+            if (habit.frequency === 'daily') {
+              return true;
+            }
+          
+            if (habit.frequency === 'weekly') {
+              return daysOfWeek.includes(dayOfWeek);
+            }
+          
+            if (habit.frequency === 'custom') {
+              // For custom frequency, check if the current day is in the habit's days_of_week
+              return daysOfWeek.includes(dayOfWeek);
+            }
+          
+            return false;
+          };
 
-      const habitsProgressArray = Object.entries(habitData).map(([date, habits]) => ({
-        date,
-        habits,
-      }));
+          const logsForDate = habitsLogs.filter(log => format(addDays(new Date(log.date), 1), "M/d/yyyy") === date);
+          const habitsForDate = fetchedHabits
+            .filter(habit => isValidDate(new Date(date), habit)) // Filter habits based on date
+            .map(habit => {
+              const logForHabit = logsForDate.find(log => log.habit_id === habit.habit_id);
+              return logForHabit
+                ? { ...logForHabit, name: habit.name, color: habit.color }
+                : { name: habit.name, status: "Incomplete", color: habit.color, habit_id: habit.habit_id, frequency: habit.frequency, days_of_week: habit.days_of_week , emoji: habit.emoji,};
+            });
+          acc[date] = habitsForDate;
+          return acc;
+        }, {});
+
+        const habitsProgressArray = Object.entries(habitData).map(([date, habits]) => ({
+          date,
+          habits: habits.map(habit => ({
+            ...habit,
+            emoji: habit.emoji || '' // Ensure emoji is included, even if empty
+          }))
+        }));
+        
 
       setHabitsProgress(habitsProgressArray);
     });
@@ -212,6 +282,8 @@ useEffect(() => {
         color: habit.color,
         habit_id: habit.habit_id || '',
         emoji: habit.emoji,
+        frequency: habit.frequency,
+        days_of_week: habit.days_of_week,
       }));
       
       setTodayHabits(habitsWithId);

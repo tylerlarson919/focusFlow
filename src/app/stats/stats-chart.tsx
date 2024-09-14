@@ -90,7 +90,7 @@ const StatsChart: NextPage<{ data: { name: string; totalLength: number }[]; clas
           <CartesianGrid strokeDasharray="none" stroke="var(--dark3)" />
           <XAxis
             dataKey="name"
-            tick={{ fontSize: 16, dy: 10 }}
+            tick={{ fontSize: 12, dy: 10 }}
             axisLine={false}
             tickLine={false}
             tickFormatter={(name = '') => {
@@ -104,6 +104,7 @@ const StatsChart: NextPage<{ data: { name: string; totalLength: number }[]; clas
               const hours = Math.floor(value / 60);
               return `${hours}h`;
             }}
+            tick={{ fontSize: 12}}
             axisLine={false}
             tickLine={false}
           />

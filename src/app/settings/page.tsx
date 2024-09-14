@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@nextui-org/table";
-import { Button, Textarea } from "@nextui-org/react";
+import { Button, Textarea, Select, SelectItem } from "@nextui-org/react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@nextui-org/modal";
 import { getFirestore, getDocs, addDoc, doc, updateDoc, collection, deleteDoc } from "firebase/firestore";
 import { app } from "../../../firebase"; // Assuming firebase.js is in the same folder
@@ -34,23 +34,33 @@ const SettingsPage: React.FC = () => {
   
   const fetchHabits = async () => {
     try {
-      const habitDocs = await getDocs(habitsRefrenceCollection); // Use habitsRefrenceCollection
+      const habitDocs = await getDocs(habitsRefrenceCollection);
       const fetchedHabits = habitDocs.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
+      console.log("Fetched habits:", fetchedHabits); // Check if the fields are present
       setHabits(fetchedHabits);
-      console.log("Fetched habits:", fetchedHabits);
     } catch (error) {
       console.error("Error fetching habits:", error);
     }
   };
+  
 
   const handleRowClick = (habit: any) => {
-    setSelectedHabit(habit);
+    setSelectedHabit({
+      id: habit.id,
+      name: habit.name || "",
+      color: habit.color || "var(--cal-blue)",
+      emoji: habit.emoji || "",
+      frequency: habit.frequency || "daily", // Default if not set
+      days_of_week: habit.days_of_week || [] // Default to empty array if not set
+    });
     setSelectedEmoji(habit.emoji || ""); // Set the emoji from the habit data
     setIsModalOpen(true);
   };
+  
+  
   
   const handleClose = async () => {
     setSelectedHabit(null);
@@ -69,19 +79,21 @@ const SettingsPage: React.FC = () => {
         const habitDocRef = doc(collection(mainDocRef, "habits_refrence"), habit.id);
         await updateDoc(habitDocRef, {
           name: habit.name,
-          description: habit.description,
           color: habit.color,
           emoji: selectedEmoji,
+          frequency: habit.frequency,
+          days_of_week: habit.days_of_week || []
         });
         console.log("Updated habit:", habit);
       } else {
         // Create new habit
         await addDoc(collection(mainDocRef, "habits_refrence"), {
           name: habit.name,
-          description: habit.description,
           color: habit.color,
           emoji: selectedEmoji,
           habit_id: uuidv4(),
+          frequency: habit.frequency,
+          days_of_week: habit.days_of_week || []
           
         });
         console.log("Created new habit:", habit);
@@ -140,7 +152,7 @@ const SettingsPage: React.FC = () => {
               color="secondary"
               variant="flat"
               onPress={() => {
-                setSelectedHabit({ name: "", description: "", color: "var(--cal-blue)" }); // Default values for a new habit
+                setSelectedHabit({ name: "", color: "var(--cal-blue)" }); // Default values for a new habit
                 setIsModalOpen(true);
               }}
             >
@@ -264,13 +276,50 @@ const SettingsPage: React.FC = () => {
               minRows={1}
             />
       
-            <Textarea
-              label="Description" // Already existing description textarea
-              value={selectedHabit?.description || ""}
-              onChange={(e) => setSelectedHabit({ ...selectedHabit, description: e.target.value })}
-              fullWidth
-              minRows={1}
-            />
+      <Select
+        label="Frequency" // Add a field for habit name
+        isRequired
+        placeholder="Frequency"
+        defaultSelectedKeys={[selectedHabit?.frequency || ""]}
+        onChange={(e) => setSelectedHabit({
+          ...selectedHabit, 
+          frequency: e.target.value
+        })}
+        className="max-w-full"
+      >
+        <SelectItem key="custom" value="custom">Custom</SelectItem>
+        <SelectItem key="daily" value="daily">Daily</SelectItem>
+        <SelectItem key="every-other-day" value="every-other-day">Every Other Day</SelectItem>
+        <SelectItem key="weekly" value="weekly">Weekly</SelectItem>
+        <SelectItem key="monthly" value="monthly">Monthly</SelectItem>
+      </Select>
+
+        <Select
+          label="Starts on..."
+          defaultSelectedKeys={selectedHabit?.days_of_week?.split(',') || [""]} // Convert comma-separated string to an array
+          isRequired
+          selectionMode={selectedHabit.frequency === "custom" ? "multiple" : "single"} // Multiple if custom, single otherwise
+          placeholder={
+            selectedHabit.frequency === "custom"
+              ? "Select days of the week"
+              : "Select a day of the week"
+          }
+          onChange={(e) => setSelectedHabit({
+            ...selectedHabit, 
+            days_of_week: e.target.value
+          })}
+          className="max-w-full"
+        >
+          <SelectItem key="1" value="1">Monday</SelectItem>
+          <SelectItem key="2" value="2">Tuesday</SelectItem>
+          <SelectItem key="3" value="3">Wednesday</SelectItem>
+          <SelectItem key="4" value="4">Thursday</SelectItem>
+          <SelectItem key="5" value="5">Friday</SelectItem>
+          <SelectItem key="6" value="6">Saturday</SelectItem>
+          <SelectItem key="7" value="7">Sunday</SelectItem>
+        </Select>
+    
+
           </ModalBody>
       
           <ModalFooter>

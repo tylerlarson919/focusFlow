@@ -90,7 +90,7 @@ const HabitProgressCircle: React.FC<HabitProgressCircleProps> = ({
   const circumferenceMain = 2 * Math.PI * radiusMain;
 
   return (
-    <div className="flex flex-col items-center w-full h-full gap-4 pt-4">
+    <div className="flex flex-col items-center w-full h-full gap-4">
       {moduleType === "week" && (
         <div className="flex items-center">
           <button onClick={handlePrev} className="mr-2">

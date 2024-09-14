@@ -17,6 +17,10 @@ interface Habit {
   status: string;
   color: string;
   habit_id: string;
+  frequency: string;
+  days_of_week: string;
+
+
 }
 
 interface HabitLog {
@@ -24,6 +28,8 @@ interface HabitLog {
   date: string; // Ensure this is a date string in your Firestore documents
   habit_id: string;
   status: string;
+  frequency: string;
+  days_of_week: string;
 }
 
 interface Task {
@@ -42,7 +48,7 @@ const StatsPage: React.FC = () => {
   const [chartData, setChartData] = useState<{ name: string; totalLength: number }[]>([]);
   // Add these for habits
   const [mainProgress, setMainProgress] = useState<{ date: string; percentage: number }[]>([]);
-  const [habitsProgress, setHabitsProgress] = useState<{ date: string; habits: { name: string; status: string; color: string }[] }[]>([]);
+  const [habitsProgress, setHabitsProgress] = useState<{ date: string; habits: { name: string; status: string; color: string; frequency: string; days_of_week: string; }[] }[]>([]);
   const [hasFetchedHabitsAndTasks, setHasFetchedHabitsAndTasks] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
 
@@ -56,7 +62,6 @@ const StatsPage: React.FC = () => {
         id: doc.id,
         ...doc.data(),
       }));
-      console.log('Fetched sessions:', fetchedSessions);
       setSessions(fetchedSessions);
     };
 
@@ -231,17 +236,42 @@ const StatsPage: React.FC = () => {
         const habitMap = new Map(fetchedHabits.map((habit) => [habit.habit_id, habit]));
     
         // Process habit log data
-        const habitData = weekDates.reduce((acc: { [date: string]: { name: string; status: string; color: string; habit_id: string }[] }, date) => {
+        const habitData = weekDates.reduce((acc: { [date: string]: { name: string; status: string; color: string; habit_id: string; frequency: string; days_of_week: string; }[] }, date) => {
+          // Check if the date matches the habit frequency and days_of_week
+          const isValidDate = (date: Date, habit: Habit): boolean => {
+            const dayOfWeek = new Date(date).getDay() ; // Get the day of the week (1 = Monday, 7 = Sunday)
+            const daysOfWeek = habit.days_of_week.split(',').map(Number); // Convert to array of numbers
+            const today = format(date, 'M/d/yyyy');
+          
+            if (habit.frequency === 'daily') {
+              return true;
+            }
+          
+            if (habit.frequency === 'weekly') {
+              return daysOfWeek.includes(dayOfWeek);
+            }
+          
+            if (habit.frequency === 'custom') {
+              // For custom frequency, check if the current day is in the habit's days_of_week
+              return daysOfWeek.includes(dayOfWeek);
+            }
+          
+            return false;
+          };
+
           const logsForDate = habitsLogs.filter(log => format(addDays(new Date(log.date), 1), "M/d/yyyy") === date);
-          const habitsForDate = fetchedHabits.map(habit => {
-            const logForHabit = logsForDate.find(log => log.habit_id === habit.habit_id);
-            return logForHabit
-              ? { ...logForHabit, name: habit.name, color: habit.color }
-              : { name: habit.name, status: "Incomplete", color: habit.color, habit_id: habit.habit_id };
-          });
+          const habitsForDate = fetchedHabits
+            .filter(habit => isValidDate(new Date(date), habit)) // Filter habits based on date
+            .map(habit => {
+              const logForHabit = logsForDate.find(log => log.habit_id === habit.habit_id);
+              return logForHabit
+                ? { ...logForHabit, name: habit.name, color: habit.color }
+                : { name: habit.name, status: "Incomplete", color: habit.color, habit_id: habit.habit_id, frequency: habit.frequency, days_of_week: habit.days_of_week };
+            });
           acc[date] = habitsForDate;
           return acc;
         }, {});
+
         
 
 
@@ -254,8 +284,6 @@ const StatsPage: React.FC = () => {
         // Update state with processed data
         setHabitsProgress(habitsProgressArray);
         setMainProgress(mainProgress);
-        console.log("Habits progress:", habitsProgressArray); // Updated to show aggregated data
-        console.log("Main progress:", mainProgress);
       } catch (error) {
         console.error("Error fetching habits and tasks:", error);
       } finally {
@@ -299,7 +327,7 @@ const StatsPage: React.FC = () => {
           <div className={styles.leftContent}>
             <Dropdown>
               <DropdownTrigger>
-                <Button className='h-full' variant={"flat"}>
+                <Button className='h-10 w-full' variant={"flat"}>
                   {selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)}
                 </Button>
               </DropdownTrigger>
