@@ -2,13 +2,13 @@
 import { initializeApp } from "firebase/app";
 import { query, where, getFirestore, collection, addDoc, getDocs, getDoc, doc, writeBatch, setDoc } from "firebase/firestore";
 import { subHours } from 'date-fns';
+import { getAuth } from 'firebase/auth';
 
 import { getStorage } from "firebase/storage"; // Import Firebase Storage
 
-
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "d13cf4aa75e61e62c52c8fca858d35dbe7348c4d",
+  apiKey: "AIzaSyB85PzqamaBqI24MA6v7eHmPrBJ9fVGzk4",
   authDomain: "focusflow-693a5.firebaseapp.com",
   projectId: "focusflow-693a5",
   storageBucket: "focusflow-693a5.appspot.com",
@@ -16,8 +16,9 @@ const firebaseConfig = {
   appId: "1:824288440733:web:94428e172841bfe481bf74",
 };
 
-// Initialize Firebasegs://tradingty-6ed07.appspot.com
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app); // Get the auth instance
 const storage = getStorage(app);
 const db = getFirestore(app);
 const tasksCollection = collection(db, "tasks");
@@ -26,16 +27,21 @@ const mainDocRef = doc(db, "habits", "main");
 const habitsRefrenceCollection = collection(mainDocRef, "habits_refrence");
 const habitsLogCollection = collection(mainDocRef, "habits_log");
 
-
 // Firestore Collections and Functions
 const sessionsCollection = collection(db, "sessions");
 
-// LogSession Function - No Authentication Required
+// LogSession Function - Authentication Required
 export const LogSession = async (session) => {
+  const user = auth.currentUser; // Get the current user
+  if (!user) {
+    console.error("User not authenticated.");
+    return;
+  }
+
   try {
     const docRef = await addDoc(sessionsCollection, {
       ...session,
-      // Remove userId, as we're not associating sessions with a specific user
+      userId: user.uid, // Add user ID to the session data
     });
     console.log("Document written with ID: ", docRef.id);
     return docRef.id; // Return the session ID
@@ -46,8 +52,15 @@ export const LogSession = async (session) => {
 
 // getSessions Function - No Authentication Required
 export const getSessions = async () => {
+  const user = auth.currentUser; // Get the current user
+  if (!user) {
+    console.error("User not authenticated.");
+    return [];
+  }
+
   try {
-    const querySnapshot = await getDocs(sessionsCollection);
+    const q = query(sessionsCollection, where("userId", "==", user.uid)); // Filter by user ID
+    const querySnapshot = await getDocs(q);
     const sessions = [];
     querySnapshot.forEach((doc) => {
       sessions.push({ id: doc.id, ...doc.data() });
@@ -59,6 +72,12 @@ export const getSessions = async () => {
 };
 
 export const createOrUpdateHabitInFirestore = async (habit) => {
+  const user = auth.currentUser; // Get the current user
+  if (!user) {
+    console.error("User not authenticated.");
+    return;
+  }
+
   try {
     const { id, ...habitData } = habit;
     const currentDate = subHours(new Date(), 4).toISOString().split('T')[0];  // Get current date in YYYY-MM-DD format
@@ -106,8 +125,13 @@ export const createOrUpdateHabitInFirestore = async (habit) => {
  * @param {string} habitId - The habit ID to fetch the status for.
  * @returns {Promise<string | null>} - The status of the habit or null if no document exists.
  */
-
 export const getHabitLogStatus = async (habitId) => {
+  const user = auth.currentUser; // Get the current user
+  if (!user) {
+    console.error("User not authenticated.");
+    return null; // Return null or appropriate default value
+  }
+
   try {
     const currentDate = subHours(new Date(), 4).toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
     const habitQuery = query(
@@ -129,10 +153,13 @@ export const getHabitLogStatus = async (habitId) => {
   }
 };
 
-
-
-
 export const getHabits = async () => {
+  const user = auth.currentUser; // Get the current user
+  if (!user) {
+    console.error("User not authenticated.");
+    return []; // Return an empty array or appropriate default value
+  }
+
   try {
     const querySnapshot = await getDocs(habitsLogCollection);
     return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -142,19 +169,24 @@ export const getHabits = async () => {
 };
 
 export const getTasks = async () => {
+  const user = auth.currentUser; // Get the current user
+  if (!user) {
+    console.error("User not authenticated.");
+    return []; // Return an empty array or appropriate default value
+  }
+
   try {
-    const querySnapshot = await getDocs(tasksCollection);
+    const q = query(tasksCollection, where("userId", "==", user.uid)); // Filter tasks by user ID
+    const querySnapshot = await getDocs(q);
     const tasks = [];
     querySnapshot.forEach((doc) => {
       tasks.push({ id: doc.id, ...doc.data() });
     });
     return tasks;
   } catch (e) {
-    console.error("Error getting documents: ", e);
+    console.error("Error getting tasks: ", e);
   }
 };
-
-
 
 // Export the initialized Firebase app, auth, and db
 export { app, db, storage, tasksCollection, habitsCollection };

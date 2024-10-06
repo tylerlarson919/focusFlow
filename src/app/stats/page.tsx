@@ -9,6 +9,7 @@ import { db  } from "../../../firebase";
 import { startOfWeek, endOfWeek, startOfMonth, startOfYear, format, eachDayOfInterval, subDays, addDays } from 'date-fns';
 import { convertLengthToMinutes, parseDate, sortDataByDate } from './utils';
 import HabitProgressCircle from './HabitProgressCircle'
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 
 interface Habit {
@@ -19,6 +20,7 @@ interface Habit {
   habit_id: string;
   frequency: string;
   days_of_week: string;
+  userId: string; // Ensure this property exists
 
 
 }
@@ -30,6 +32,8 @@ interface HabitLog {
   status: string;
   frequency: string;
   days_of_week: string;
+  userId: string; // Ensure this property exists
+
 }
 
 interface Task {
@@ -37,12 +41,20 @@ interface Task {
   completedAt: string; // or Date if you prefer
   status: string;
   date: string;
+  userId: string; // Ensure this property exists
+
 }
 
-
+interface Session {
+  id: string;
+  userId: string; // Ensure this property exists
+  startDate: string; // Or Date, based on your data
+  length: string; // Adjust as necessary for your length type
+  // Add other properties as needed
+}
 
 const StatsPage: React.FC = () => {
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]); // Use the defined interface
   const [dateRange, setDateRange] = useState<RangeValue<DateValue> | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("day");
   const [chartData, setChartData] = useState<{ name: string; totalLength: number }[]>([]);
@@ -53,6 +65,22 @@ const StatsPage: React.FC = () => {
   const [isFetching, setIsFetching] = useState(false);
 
 
+  const [userId, setUserId] = useState<string | null>(null);
+  const auth = getAuth();
+
+  useEffect(() => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+          if (user) {
+              setUserId(user.uid);
+          } else {
+              setUserId(null);
+          }
+      });
+
+      return () => unsubscribe();
+  }, [auth]);
+
+
   useEffect(() => {
     const fetchSessions = async () => {
       console.log('Fetching sessions...');
@@ -61,12 +89,15 @@ const StatsPage: React.FC = () => {
       const fetchedSessions = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      }));
-      setSessions(fetchedSessions);
+      })) as Session[]; // Ensure fetched sessions are of type Session
+  
+      // Filter sessions for the logged-in user
+      const userSessions = fetchedSessions.filter((session) => session.userId === userId);
+      setSessions(userSessions);
     };
-
+  
     fetchSessions();
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     const sortSessions = () => {
@@ -168,6 +199,9 @@ const StatsPage: React.FC = () => {
         if (fetchedTasks.length === 0) {
           console.warn("No tasks found.");
         }
+
+        const userTasks = fetchedTasks.filter((task) => task.userId === userId);
+
     
         // Process task progress data
         const taskProgress = fetchedTasks.reduce(
@@ -221,6 +255,9 @@ const StatsPage: React.FC = () => {
           ...doc.data(),
         })) as HabitLog[];
     
+        const userHabits = fetchedHabits.filter((habit) => habit.userId === userId);
+        const userHabitsLogs = habitsLogs.filter((log) => log.userId === userId);
+
         // Get the start and end of the current week
         const startOfTwoMonthDate = subDays(new Date(), 30);
         const endOfTwoMonthDate = addDays(new Date(), 30);
@@ -296,7 +333,7 @@ const StatsPage: React.FC = () => {
       fetchHabitsAndTasks();
       setHasFetchedHabitsAndTasks(true); // Set the state to true after fetching
     }
-  }, [hasFetchedHabitsAndTasks]);
+  }, [userId, hasFetchedHabitsAndTasks]);
   
   
   

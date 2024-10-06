@@ -6,6 +6,7 @@ import styles from './dashboard-right-top.module.css';
 import { LogSession, getSessions, db } from "../../../firebase";
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 // Helper function to format time as MM:SS
 // Helper function to format time as HH:MM:SS
@@ -20,6 +21,23 @@ const formatTime = (time: number) => {
 
 
 const RightSide: React.FC = () => {
+
+  const [userId, setUserId] = useState<string | null>(null);
+  const auth = getAuth();
+
+  useEffect(() => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+          if (user) {
+              setUserId(user.uid);
+          } else {
+              setUserId(null);
+          }
+      });
+
+      return () => unsubscribe();
+  }, [auth]);
+
+
   // Stopwatch state
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -224,7 +242,8 @@ useEffect(() => {
         type: 'stopwatch',
         length: '',
         plantNumber: currentPlant,
-        plantStage: 1 // Initial stage
+        plantStage: 1,
+        userId: userId,
       });
   
       if (typeof sessionId === 'string') {
@@ -330,6 +349,7 @@ const handleResume = () => {
           length: length,
           plantStage: currentStage, // Update the stage here
           plantNumber: currentPlant,
+          userId: userId,
         });
   
         console.log('Session updated successfully with end date and duration.');

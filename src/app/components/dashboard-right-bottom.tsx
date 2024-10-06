@@ -16,6 +16,7 @@ import { LogSession, getSessions } from "../../../firebase";
 import { onSnapshot, collection, Timestamp } from "firebase/firestore";
 import { getFirestore } from "firebase/firestore";
 import {useAsyncList} from "@react-stately/data";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 
 
@@ -28,7 +29,7 @@ interface Session {
   length: string;     // Change to string for formatted length
   name?: string;      // Add name field
   description?: string; 
-
+  userId?: string;
 }
 
 // Convert Firestore Timestamp to ISO string
@@ -88,6 +89,21 @@ interface LeftSideProps {
 
 const LeftSide: React.FC<LeftSideProps> = ({ onModalOpenChange, onSessionSelect }) => {
 
+  const [userId, setUserId] = useState<string | null>(null);
+  const auth = getAuth();
+
+  useEffect(() => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+          if (user) {
+              setUserId(user.uid);
+          } else {
+              setUserId(null);
+          }
+      });
+
+      return () => unsubscribe();
+  }, [auth]);
+
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -132,14 +148,14 @@ useEffect(() => {
   const fetchSessions = async () => {
     try {
       const sessionsData = await getSessions();
-      if (sessionsData) {
-        const sortedSessions: Session[] = sessionsData
+      const filteredSessions = sessionsData ? sessionsData.filter(session => session.userId === userId) : [];
+      
+      if (filteredSessions.length > 0) {
+        const sortedSessions: Session[] = filteredSessions
           .map(session => {
-            // Ensure correct type handling
             const startDate = session.startDate instanceof Timestamp ? session.startDate.toDate() : new Date(session.startDate);
             const endDate = session.endDate ? (session.endDate instanceof Timestamp ? session.endDate.toDate() : new Date(session.endDate)) : null;
             
-            // Use `length` if endDate is present; otherwise use `formatLength`
             const length = endDate ? session.length : formatLength(startDate, endDate);
             
             return {
@@ -166,7 +182,6 @@ useEffect(() => {
       const startDate = data.startDate instanceof Timestamp ? data.startDate.toDate() : new Date(data.startDate);
       const endDate = data.endDate ? (data.endDate instanceof Timestamp ? data.endDate.toDate() : new Date(data.endDate)) : null;
 
-      // Use `length` if endDate is present; otherwise use `formatLength`
       const length = endDate ? data.length : formatLength(startDate, endDate);
 
       return {
@@ -177,18 +192,21 @@ useEffect(() => {
         length,
         name: data.name || '',
         description: data.description || '',
+        userId: data.userId || null,
       } as Session;
     });
 
-    if (sessionsData) {
-      const sortedSessions: Session[] = sessionsData
+    const filteredSessions = sessionsData ? sessionsData.filter(session => session.userId === userId) : [];
+
+    if (filteredSessions.length > 0) {
+      const sortedSessions: Session[] = filteredSessions
         .sort((a, b) => new Date(b.endDate || now).getTime() - new Date(a.endDate || now).getTime());
       setSessions(sortedSessions);
     }
   });
 
   return () => unsubscribe(); // Cleanup listener on component unmount
-}, []);
+}, [userId]); // Add userId as a dependency
 
   
   

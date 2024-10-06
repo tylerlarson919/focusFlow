@@ -13,11 +13,24 @@ import { v4 as uuidv4 } from 'uuid'; // Import UUID library for generating uniqu
 import data from '@emoji-mart/data'
 import Picker from '@emoji-mart/react'
 import { size } from "lodash";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const db = getFirestore(app);
 
+interface Habit {
+  id: string;
+  name: string;
+  color: string;
+  emoji: string;
+  frequency: string;
+  days_of_week: string[];
+  userId?: string; // Make it optional if not all habits will have it
+}
+
+
+
 const SettingsPage: React.FC = () => {
-  const [habits, setHabits] = useState<any[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]); // Use the Habit interface
   const [selectedHabit, setSelectedHabit] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -27,24 +40,41 @@ const SettingsPage: React.FC = () => {
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const emojiPickerRef = useRef(null); // Ref to handle hover outside
 
+  const [userId, setUserId] = useState<string | null>(null);
+  const auth = getAuth();
 
+  useEffect(() => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+          if (user) {
+              setUserId(user.uid);
+          } else {
+              setUserId(null);
+          }
+      });
+
+      return () => unsubscribe();
+  }, [auth]);
 
 
 
   
+
   const fetchHabits = async () => {
     try {
       const habitDocs = await getDocs(habitsRefrenceCollection);
       const fetchedHabits = habitDocs.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      }));
-      console.log("Fetched habits:", fetchedHabits); // Check if the fields are present
-      setHabits(fetchedHabits);
+      })) as Habit[]; // Cast to the Habit interface
+  
+      const filteredHabits = fetchedHabits.filter(habit => habit.userId === userId); // Now it recognizes userId
+      console.log("Fetched habits:", filteredHabits);
+      setHabits(filteredHabits);
     } catch (error) {
       console.error("Error fetching habits:", error);
     }
   };
+  
   
 
   const handleRowClick = (habit: any) => {
@@ -82,7 +112,8 @@ const SettingsPage: React.FC = () => {
           color: habit.color,
           emoji: selectedEmoji,
           frequency: habit.frequency,
-          days_of_week: habit.days_of_week || []
+          days_of_week: habit.days_of_week || [],
+          userId: userId, // Ensure the userId is updated as well
         });
         console.log("Updated habit:", habit);
       } else {
@@ -93,8 +124,8 @@ const SettingsPage: React.FC = () => {
           emoji: selectedEmoji,
           habit_id: uuidv4(),
           frequency: habit.frequency,
-          days_of_week: habit.days_of_week || []
-          
+          days_of_week: habit.days_of_week || [],
+          userId: userId, // Set the userId for the new habit
         });
         console.log("Created new habit:", habit);
       }

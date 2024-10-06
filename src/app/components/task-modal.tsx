@@ -5,6 +5,7 @@ import { db } from '../../../firebase';
 import { collection, addDoc, setDoc, deleteDoc,getDoc,updateDoc, doc } from 'firebase/firestore';
 import { FaCalendar, FaTrash } from "react-icons/fa";
 import styles from './dashboard-left-top.module.css';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 
 interface TaskModalProps {
@@ -18,7 +19,24 @@ interface TaskModalProps {
 }
 
 const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, onNewTaskClick, initialDate }) => {
-    // Convert initialDate to ISO format if provided, otherwise null
+
+    const [userId, setUserId] = useState<string | null>(null);
+    const auth = getAuth();
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                setUserId(user.uid);
+            } else {
+                setUserId(null);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [auth]);
+
+
+
     const convertToISODate = (dateString: string): string => {
         // Check if the date string is already in ISO format
         const isoDatePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/;
@@ -93,7 +111,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
                 name,
                 description,
                 status: currentStatus[task?.id || ''] || task?.status || 'Not Started', // Updated status
-                color, 
+                color,
+                userId, // Add userId field
             };
     
             try {
@@ -118,6 +137,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, task, on
             }
         }
     };
+    
     
 
     

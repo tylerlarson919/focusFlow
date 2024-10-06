@@ -20,6 +20,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { FaPlus, FaSpinner, FaCircleNotch } from "react-icons/fa";
 import { FaRegCircleCheck } from "react-icons/fa6";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 
 const locales = {
@@ -54,8 +55,9 @@ interface Task {
   length: string;
   name?: string;
   description?: string;
-  color?: string;
+  color: string;
   status: 'Completed' | 'In Progress' | 'Not Started';
+  userId?: string;
 
 }
 
@@ -68,6 +70,8 @@ interface MyEvent {
   color?: string;
   [key: string]: any;
   status: 'Completed' | 'In Progress' | 'Not Started';
+  userId?: string;
+
 }
 
 const MyCalendar = () => {
@@ -81,6 +85,22 @@ const MyCalendar = () => {
   const DragAndDropCalendar = withDragAndDrop<MyEvent>(Calendar);
   const [isAltPressed, setIsAltPressed] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
+
+
+  const [userId, setUserId] = useState<string | null>(null);
+  const auth = getAuth();
+
+  useEffect(() => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+          if (user) {
+              setUserId(user.uid);
+          } else {
+              setUserId(null);
+          }
+      });
+
+      return () => unsubscribe();
+  }, [auth]);
 
 
   // Fetch tasks from Firestore
@@ -108,25 +128,34 @@ const MyCalendar = () => {
   
   
   const fetchTasks = async () => {
+    if (!userId) return; // Do not fetch tasks if userId is not set
     try {
       const querySnapshot = await getDocs(collection(db, 'tasks'));
-      const tasksData = querySnapshot.docs.map((doc) => {
-        const task = doc.data() as Task;
-        return {
-          title: task.name || "New Task",
-          start: new Date(task.date),
-          end: task.endDate ? new Date(task.endDate) : new Date(task.date),
-          color: task.color || 'var(--blue)',
-          resource: task,
-          status: task.status,
-
-        };
-      });
+      const tasksData = querySnapshot.docs
+      .map((doc) => {
+          const task = doc.data() as Task;
+          // Check if task matches userId
+          if (task.userId === userId) {
+              return {
+                  title: task.name || "New Task",
+                  start: new Date(task.date),
+                  end: task.endDate ? new Date(task.endDate) : new Date(task.date),
+                  color: task.color || 'var(--blue)', // Use fallback color
+                  resource: task,
+                  status: task.status,
+              } as MyEvent; // Type assertion here
+          }
+          return null; // Return null if it doesn't match
+      })
+      .filter((task): task is MyEvent => task !== null); // Filter out null tasks
+  
+  
       setEvents(tasksData);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     }
   };
+
   const moveEvent = useCallback(
     async ({ event, start, end, isAllDay }: EventInteractionArgs<MyEvent>): Promise<void> => {
       const startDate = typeof start === 'string' ? new Date(start) : start;

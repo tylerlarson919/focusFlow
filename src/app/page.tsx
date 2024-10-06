@@ -1,4 +1,7 @@
 "use client";
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { where } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import styles from './page.module.css';
 import LeftTop from './components/dashboard-left-top';
@@ -59,6 +62,22 @@ interface Task {
 
 
 const Page: React.FC = () => {
+
+    const router = useRouter();
+  
+    useEffect(() => {
+      const auth = getAuth();
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          setCurrentUserId(user.uid); // Store the current user's ID
+        } else {
+          router.push('/login'); // Navigate to login if not authenticated
+        }
+      });
+      return () => unsubscribe();
+    }, [router]);
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -74,7 +93,7 @@ const Page: React.FC = () => {
   const [todayHabits, setTodayHabits] = useState<Habit[]>([]);
 
 
-
+  
 
   const getDaysOfWeek = (daysOfWeek: string[]): number[] => {
     // Map days_of_week string to numbers (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
@@ -149,11 +168,13 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
 };
   
 useEffect(() => {
-  const unsubscribeTasks = onSnapshot(query(collection(db, "tasks")), (snapshot) => {
-    const fetchedTasks = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Task[];
+  const unsubscribeTasks = onSnapshot(
+    query(collection(db, "tasks"), where("userId", "==", currentUserId)), 
+    (snapshot) => {
+      const fetchedTasks = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Task[];
 
     // Process task progress
     const taskProgress = fetchedTasks.reduce(
@@ -191,13 +212,17 @@ useEffect(() => {
     setMainProgress(mainProgress);
   });
 
-  const unsubscribeHabits = onSnapshot(query(collection(db, "habits", "main", "habits_refrence")), (snapshot) => {
-    const fetchedHabits = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Habit[];
-
-    const unsubscribeHabitLogs = onSnapshot(query(collection(db, "habits", "main", "habits_log")), (snapshot) => {
+  const unsubscribeHabits = onSnapshot(
+    query(collection(db, "habits", "main", "habits_reference"), where("userId", "==", currentUserId)), 
+    (snapshot) => {
+      const fetchedHabits = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Habit[];
+  
+      const unsubscribeHabitLogs = onSnapshot(
+        query(collection(db, "habits", "main", "habits_log"), where("userId", "==", currentUserId)),
+      (snapshot) => {
       const habitsLogs = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
