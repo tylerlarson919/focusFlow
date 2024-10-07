@@ -19,6 +19,7 @@ const HeaderMain: React.FC<HeaderMainProps> = ({ className }) => {
     "Calendar",
     "Stats",
     "Settings",
+    "Trades",
     "Log Out",
   ];
 

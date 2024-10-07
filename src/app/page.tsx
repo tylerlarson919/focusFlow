@@ -168,129 +168,115 @@ const OpenEditTaskModal = (isClicked: boolean, task: any) => {
 };
   
 useEffect(() => {
-  const unsubscribeTasks = onSnapshot(
-    query(collection(db, "tasks"), where("userId", "==", currentUserId)), 
-    (snapshot) => {
-      const fetchedTasks = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Task[];
+  if (currentUserId) { // Ensure the currentUserId is available
 
-    // Process task progress
-    const taskProgress = fetchedTasks.reduce(
-      (acc: { [date: string]: { completed: number; total: number } }, task) => {
-        let taskDate;
-        try {
-          taskDate = new Date(task.date);
-          if (isNaN(taskDate.getTime())) throw new Error("Invalid date");
-        } catch {
-          console.error(`Invalid task date: ${task.date}`);
-          return acc;
-        }
-
-        const formattedDate = format(taskDate, "M/d/yyyy");
-        if (!acc[formattedDate]) {
-          acc[formattedDate] = { completed: 0, total: 0 };
-        }
-        acc[formattedDate].total += 1;
-        if (task.status === "Completed") {
-          acc[formattedDate].completed += 1;
-        }
-        return acc;
-      },
-      {}
-    );
-
-    const mainProgress = Object.entries(taskProgress).map(
-      ([date, { completed, total }]) => ({
-        date,
-        percentage: total === 0 ? 0 : (completed / total) * 100,
-      })
-    );
-
-    setTasks(fetchedTasks);
-    setMainProgress(mainProgress);
-  });
-
-  const unsubscribeHabits = onSnapshot(
-    query(collection(db, "habits", "main", "habits_reference"), where("userId", "==", currentUserId)), 
-    (snapshot) => {
-      const fetchedHabits = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Habit[];
-  
-      const unsubscribeHabitLogs = onSnapshot(
-        query(collection(db, "habits", "main", "habits_log"), where("userId", "==", currentUserId)),
+    const unsubscribeTasks = onSnapshot(
+      query(
+        collection(db, "tasks"),
+        where("userId", "==", currentUserId) // Filter by userId
+      ),
       (snapshot) => {
-      const habitsLogs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as HabitLog[];
+        const fetchedTasks = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Task[];
 
-      // Process habit log data
-      const startOfTwoMonthDate = subDays(new Date(), 10);
-      const endOfTwoMonthDate = addDays(new Date(), 10);
-      const weekDates = eachDayOfInterval({ start: startOfTwoMonthDate, end: endOfTwoMonthDate }).map(date => format(date, "M/d/yyyy"));
-
-      const existingDates = new Set(habitsLogs.map(log => format(new Date(log.date), "M/d/yyyy")));
-      const habitMap = new Map(fetchedHabits.map(habit => [habit.habit_id, habit]));
-
-        // Process habit log data
-        const habitData = weekDates.reduce((acc: { [date: string]: { name: string; status: string; color: string; habit_id: string; emoji: string; frequency: string; days_of_week: string; }[] }, date) => {
-          // Check if the date matches the habit frequency and days_of_week
-          const isValidDate = (date: Date, habit: Habit): boolean => {
-            const dayOfWeek = new Date(date).getDay() ; // Get the day of the week (1 = Monday, 7 = Sunday)
-            const daysOfWeek = habit.days_of_week.split(',').map(Number); // Convert to array of numbers
-            const today = format(date, 'M/d/yyyy');
-          
-            if (habit.frequency === 'daily') {
-              return true;
+        const taskProgress = fetchedTasks.reduce(
+          (acc: { [date: string]: { completed: number; total: number } }, task) => {
+            let taskDate;
+            try {
+              taskDate = new Date(task.date);
+              if (isNaN(taskDate.getTime())) throw new Error("Invalid date");
+            } catch {
+              console.error(`Invalid task date: ${task.date}`);
+              return acc;
             }
-          
-            if (habit.frequency === 'weekly') {
-              return daysOfWeek.includes(dayOfWeek);
-            }
-          
-            if (habit.frequency === 'custom') {
-              // For custom frequency, check if the current day is in the habit's days_of_week
-              return daysOfWeek.includes(dayOfWeek);
-            }
-          
-            return false;
-          };
 
-          const logsForDate = habitsLogs.filter(log => format(addDays(new Date(log.date), 1), "M/d/yyyy") === date);
-          const habitsForDate = fetchedHabits
-            .filter(habit => isValidDate(new Date(date), habit)) // Filter habits based on date
-            .map(habit => {
+            const formattedDate = format(taskDate, "M/d/yyyy");
+            if (!acc[formattedDate]) {
+              acc[formattedDate] = { completed: 0, total: 0 };
+            }
+            acc[formattedDate].total += 1;
+            if (task.status === "Completed") {
+              acc[formattedDate].completed += 1;
+            }
+            return acc;
+          },
+          {}
+        );
+
+        const mainProgress = Object.entries(taskProgress).map(
+          ([date, { completed, total }]) => ({
+            date,
+            percentage: total === 0 ? 0 : (completed / total) * 100,
+          })
+        );
+
+        console.log('Filtered Tasks:', fetchedTasks);  // Debug log
+        setTasks(fetchedTasks);
+        setMainProgress(mainProgress);
+      }
+    );
+
+    const unsubscribeHabits = onSnapshot(
+      query(
+        collection(db, "habits", "main", "habits_refrence"),
+        where("userId", "==", currentUserId) // Filter by userId
+      ),
+      (snapshot) => {
+        const fetchedHabits = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Habit[];
+
+        const unsubscribeHabitLogs = onSnapshot(query(collection(db, "habits", "main", "habits_log")), (snapshot) => {
+          const habitsLogs = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as HabitLog[];
+
+          const startOfTwoMonthDate = subDays(new Date(), 10);
+          const endOfTwoMonthDate = addDays(new Date(), 10);
+          const weekDates = eachDayOfInterval({ start: startOfTwoMonthDate, end: endOfTwoMonthDate }).map(date => format(date, "M/d/yyyy"));
+
+          const habitData = weekDates.reduce((acc: { [date: string]: Habit[] }, date) => {
+            const logsForDate = habitsLogs.filter(log => format(new Date(log.date), "M/d/yyyy") === date);
+            const habitsForDate = fetchedHabits.map(habit => {
               const logForHabit = logsForDate.find(log => log.habit_id === habit.habit_id);
               return logForHabit
-                ? { ...logForHabit, name: habit.name, color: habit.color }
-                : { name: habit.name, status: "Incomplete", color: habit.color, habit_id: habit.habit_id, frequency: habit.frequency, days_of_week: habit.days_of_week , emoji: habit.emoji,};
+                ? { ...logForHabit, name: habit.name, color: habit.color, id: habit.id }
+                : { name: habit.name, status: "Incomplete", color: habit.color, habit_id: habit.habit_id, emoji: habit.emoji, frequency: habit.frequency, days_of_week: habit.days_of_week, id: habit.id };  // Add 'id' here
             });
-          acc[date] = habitsForDate;
-          return acc;
-        }, {});
+            acc[date] = habitsForDate;
+            return acc;
+          }, {});
 
-        const habitsProgressArray = Object.entries(habitData).map(([date, habits]) => ({
-          date,
-          habits: habits.map(habit => ({
-            ...habit,
-            emoji: habit.emoji || '' // Ensure emoji is included, even if empty
-          }))
-        }));
-        
+          const habitsProgressArray = Object.entries(habitData).map(([date, habits]) => ({
+            date,
+            habits: habits.map(habit => ({
+              ...habit,
+              emoji: habit.emoji || '' // Ensure emoji is included, even if empty
+            }))
+          }));
 
-      setHabitsProgress(habitsProgressArray);
-    });
+          setHabitsProgress(habitsProgressArray);
+        });
+
+        return () => {
+          unsubscribeHabitLogs();
+        };
+      }
+    );
 
     return () => {
       unsubscribeTasks();
       unsubscribeHabits();
     };
-  });
-}, []);
+  }
+}, [currentUserId]);
+
+
+
 
 
 
