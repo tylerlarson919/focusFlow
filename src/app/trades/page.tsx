@@ -42,9 +42,10 @@ interface DropdownItemType {
     icon?: React.ReactNode; 
 }
 
+
 const Trades: React.FC = () => {
-    const [startDate, setStartDate] = useState<Date | null>(null);
-    const [endDate, setEndDate] = useState<Date | null>(null);
+    const [startDate, setStartDate] = useState<string | null>(null);
+    const [endDate, setEndDate] = useState<string | null>(null);    
     const [selectedSymbol, setSelectedSymbol] = useState<string>("");
     const [selectedTradeType, setSelectedTradeType] = useState<string>("");
     const [entryPrice, setEntryPrice] = useState<number>(0);
@@ -54,6 +55,8 @@ const Trades: React.FC = () => {
     const [shares, setShares] = useState<number>(0);
     const [risk, setRisk] = useState<number>(0);
     const [potentialProfit, setPotentialProfit] = useState<number>(0);
+    const [potentialLoss, setPotentialLoss] = useState<number>(0);
+    const [accountBalance, setAccountBalance] = useState<number>(0);
     const [actualProfit, setActualProfit] = useState<number>(0);
     const [userId, setUserId] = useState<string | null>(null);
     const [trades, setTrades] = useState<any[]>([]); 
@@ -68,28 +71,34 @@ const Trades: React.FC = () => {
     const [notes, setNotes] = useState<string>("");
 
     const chartData = () => {
-        return trades.map(trade => ({
-            symbol: trade.symbol,
-            entryPrice: trade.entryPrice,
-            exitPrice: trade.exitPrice,
-            type: trade.type,
-            duration: trade.duration,
-            profitLoss: trade.exitPrice - trade.entryPrice,
-        })) || [];
+        return {
+            accountBalance, 
+            startingBalance,
+            trades: trades.map(trade => ({
+                symbol: trade.symbol,
+                entryPrice: trade.entryPrice,
+                exitPrice: trade.exitPrice,
+                stopLoss: trade.stopLoss,
+                takeProfit: trade.takeProfit,
+                type: trade.type,
+                duration: trade.duration,
+                profitLoss: trade.actualProfit,
+                potentialProfit: trade.potentialProfit,
+                startDate: trade.startDate,
+                risk: trade.risk,
+            })) || []
+        };
     };
 
     const fetchAccounts = async (uid: string) => {
         if (!uid) {
-            console.log("User ID is not defined");
             return;
         }
-    
         try {
             const accountsCollection = collection(db, "trades", `"${uid}"`, "accounts"); 
             const querySnapshot = await getDocs(accountsCollection);
     
             if (querySnapshot.empty) {
-                console.log("No accounts found for user:", uid);
             } else {
                 const accountsData = querySnapshot.docs.map(doc => ({
                     id: doc.id,
@@ -97,14 +106,16 @@ const Trades: React.FC = () => {
                     startingBalance: doc.data().startingBalance || 0, 
                     notes: doc.data().description || "" 
                 }));
-    
                 setAccounts(accountsData);
-    
                 const lastAccount = localStorage.getItem("selectedAccount");
                 const initialAccountId = lastAccount ? lastAccount : accountsData[0]?.id;
                 setSelectedAccount(initialAccountId);
                 
-                // Fetch trades for the initially selected account
+                const initialAccount = accountsData.find(account => account.id === initialAccountId);
+                if (initialAccount) {
+                    setStartingBalance(initialAccount.startingBalance);
+                }
+
                 if (initialAccountId && userId) {
                     fetchTrades(userId); 
                 }
@@ -113,21 +124,34 @@ const Trades: React.FC = () => {
             console.error("Error fetching accounts:", error);
         }
     };
-    
-    // Add this effect to fetch trades when selectedAccount changes
     useEffect(() => {
         if (selectedAccount && userId) {
             fetchTrades(userId);
+            const selectedAccountData = accounts.find(account => account.id === selectedAccount);
+            if (selectedAccountData) {
+                setStartingBalance(selectedAccountData.startingBalance);
+            }
         }
-    }, [selectedAccount, userId]);
+    }, [selectedAccount, userId, accounts]);
+
+    const handleAccountSwitch = (accountId: string) => {
+        setSelectedAccount(accountId);
+        localStorage.setItem("selectedAccount", accountId);
+    };
+
+    useEffect(() => {
+        calculateAccountBalance();
+    }, [trades]);
     
-    const dropdownItems: DropdownItemType[] = accounts.length > 0 
+    const dropdownItems: DropdownItemType[] = accounts.length > 0
     ? accounts.map(account => ({
         key: account.id,
         label: account.name,
         onClick: () => {
             setSelectedAccount(account.id);
             localStorage.setItem("selectedAccount", account.id);
+
+            calculateAccountBalance(); 
             
             if (userId) {
                 fetchTrades(userId); // Call only if userId is not null
@@ -147,7 +171,8 @@ const Trades: React.FC = () => {
             />
         )
     }))
-    : [{ key: "no-accounts", label: "No Accounts", onClick: () => {} } as DropdownItemType];
+    : [{ key: "no-accounts", label: "No Accounts", onClick: () => {} }];
+
     
     dropdownItems.push({
         key: "new-account",
@@ -156,6 +181,14 @@ const Trades: React.FC = () => {
         icon: null 
     });
 
+    const resetModalState = () => {
+        setAccountToEdit(null); // Reset to null or initial state
+        setNewAccountName(""); // Reset input field
+        setStartingBalance(0); // Reset input field to initial value
+        setNotes(""); // Reset input field
+        setSelectedAccount(null); // Reset selected account if needed
+    };
+
 const handleDeleteAccount = async (id: string) => {
     if (!userId) {
         console.error("User ID is null. Cannot delete account.");
@@ -163,10 +196,11 @@ const handleDeleteAccount = async (id: string) => {
     }
     
 
-    const accountsCollection = collection(db, "trades", userId, "accounts");
+    const accountsCollection = collection(db, "trades", `"${userId}"`, "accounts");
     await deleteDoc(doc(accountsCollection, id));
     fetchAccounts(userId); 
     setShowModal(false);
+    setSelectedAccount(null);
 };
 
 const handleUpdateAccount = async () => {
@@ -211,9 +245,9 @@ const handleUpdateAccount = async () => {
         }
     };
     const symbols = [
-        { key: 'AAPL', label: 'Apple (AAPL)' },
-        { key: 'TSLA', label: 'Tesla (TSLA)' },
-        { key: 'GOOGL', label: 'Alphabet (GOOGL)' },
+        { key: 'ESM', label: 'ESM' },
+        { key: 'NQM', label: 'NQM' },
+        { key: 'Other', label: 'Other' },
     ];
     const tradeTypes = [
         { key: 'long', label: 'Long' },
@@ -232,20 +266,40 @@ const handleUpdateAccount = async () => {
         return () => unsubscribe();
     }, [auth]);
     
+    const calculateAccountBalance = () => {
+        if (!selectedAccount) return;
+
+        const selectedAccountData = accounts.find(account => account.id === selectedAccount);
+        if (!selectedAccountData) return;
+
+        const startingBalance = selectedAccountData.startingBalance;
+        const totalProfit = trades.reduce((acc, trade) => {
+            return acc + (parseFloat(trade.actualProfit) || 0);
+        }, 0);
+
+        const currentBalance = Number(startingBalance) + Number(totalProfit);
+        setAccountBalance(currentBalance);
+    };
+    
+    
+    useEffect(() => {
+        // Calculate the account balance when trades are fetched
+        if (trades.length > 0) {
+            calculateAccountBalance();
+        }
+    }, [trades]); // This effect will run every time 'trades' updates
+    
     const fetchTrades = async (uid: string) => {
         if (!selectedAccount) {
             console.error("No account selected.");
             return;
         }
-    
         try {
             const tradesCollection = collection(db, "trades", `"${uid}"`, "accounts", selectedAccount, "trades");
-    
-            console.log("Fetching trades from: ", tradesCollection);
+            
             const querySnapshot = await getDocs(tradesCollection);
             const tradesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            console.log("Trades fetched:", tradesData); 
-            setTrades(tradesData);
+            setTrades(tradesData); // This will trigger the useEffect for trades
         } catch (error) {
             console.error("Error fetching trades:", error);
         }
@@ -256,6 +310,27 @@ const handleUpdateAccount = async () => {
             console.error("User ID or selected account is missing.");
             return;  
         }
+    
+        const isoStartDate = startDate ? new Date(startDate).toISOString() : null;
+        const isoEndDate = endDate ? new Date(endDate).toISOString() : null; 
+    
+        const calculateTradeDuration = (start: string | null, end: string | null): string | null => {
+            if (!start || !end) return null; 
+        
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            const durationInMillis = endDate.getTime() - startDate.getTime(); 
+            const hours = Math.floor((durationInMillis / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((durationInMillis / (1000 * 60)) % 60);
+        
+            if (hours === 0) {
+                return `${minutes}m`; 
+            } else {
+                return `${hours}h ${minutes}m`; 
+            }
+        };
+        
+        const tradeDuration = calculateTradeDuration(startDate, endDate);
     
         const newTrade = {
             userId,
@@ -269,8 +344,9 @@ const handleUpdateAccount = async () => {
             risk,
             potentialProfit,
             actualProfit,
-            startDate, 
-            endDate,   
+            startDate: isoStartDate,
+            endDate: isoEndDate,
+            duration: tradeDuration,
         };
     
         try {
@@ -280,31 +356,74 @@ const handleUpdateAccount = async () => {
         } catch (error) {
             console.error("Error submitting trade:", error);
         }
-        console.log("User ID:", userId);
-        console.log("Selected Account:", selectedAccount);
     };
-
+    useEffect(() => {
+        if (selectedAccount) {
+            const selectedAccountData = accounts.find(account => account.id === selectedAccount);
+            if (selectedAccountData) {
+                setStartingBalance(selectedAccountData.startingBalance);
+            }
+            calculateAccountBalance();
+        }
+    }, [selectedAccount, accounts]);
+    
+    
     useEffect(() => {
         if (entryPrice && takeProfit) {
+            const multiplier = symbols.some(symbol => symbol.key === selectedSymbol) ? 50 : 1;
+    
             if (selectedTradeType === 'long') {
-                setPotentialProfit((takeProfit - entryPrice) * shares);
+                setPotentialProfit((takeProfit - entryPrice) * shares * multiplier);
             } else if (selectedTradeType === 'short') {
-                setPotentialProfit((entryPrice - takeProfit) * shares);
+                setPotentialProfit((entryPrice - takeProfit) * shares * multiplier);
             }
         } else {
             setPotentialProfit(0);
         }
     
         if (entryPrice && exitPrice) {
+            const multiplier = symbols.some(symbol => symbol.key === selectedSymbol) ? 50 : 1;
+    
             if (selectedTradeType === 'long') {
-                setActualProfit((exitPrice - entryPrice) * shares);
+                setActualProfit((exitPrice - entryPrice) * shares * multiplier);
             } else if (selectedTradeType === 'short') {
-                setActualProfit((entryPrice - exitPrice) * shares);
+                setActualProfit((entryPrice - exitPrice) * shares * multiplier);
             }
         } else {
             setActualProfit(0);
         }
-    }, [entryPrice, takeProfit, exitPrice, shares, selectedTradeType]);
+    }, [entryPrice, takeProfit, exitPrice, shares, selectedTradeType, selectedSymbol]);
+    
+    useEffect(() => {
+        if (entryPrice && stopLoss) {
+            const multiplier = symbols.some(symbol => symbol.key === selectedSymbol) ? 50 : 1;
+            
+            // Determine if the trade is long or short
+            const isLong = selectedTradeType === 'long'; // Assuming 'tradeType' defines if it's long or short
+            
+            // Calculate potential loss based on entry price, stop loss, and trade direction
+            const potentialLoss = isLong 
+                ? (entryPrice - stopLoss) * shares * multiplier // Long trade calculation
+                : (stopLoss - entryPrice) * shares * multiplier; // Short trade calculation
+            
+            setPotentialLoss(potentialLoss); // Set the potential loss
+    
+            // Ensure account balance is valid and calculate the risk
+            if (potentialLoss && accountBalance) {
+                const riskPercentage = (Math.abs(potentialLoss) / accountBalance) * 100; // Risk as percentage of account balance
+                setRisk(riskPercentage);
+            } else {
+                setRisk(0); 
+            }
+        } else {
+            setPotentialLoss(0); // Reset potential loss if entry price or stop loss is not available
+            setRisk(0); // Reset risk as well
+        }
+    }, [entryPrice, stopLoss, shares, accountBalance, selectedSymbol, selectedTradeType]);
+    
+    
+    
+    
 
     const handleDeleteTrade = async (tradeId: string) => {
         if (!userId || !selectedAccount) {
@@ -321,32 +440,43 @@ const handleUpdateAccount = async () => {
         }
     };
 
+    const convertToISO = (customDate: any): string => {
+        if (!customDate) return ""; 
+    
+        const { year, month, day, hour, minute, second } = customDate;
+    
+        const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+    
+        return date.toISOString(); 
+    };
+    
     return (
         <div className={styles.bg}>
             <div className={styles.header}>
                 <HeaderMain className="top-0" />
             </div>
-            <Dropdown>
-                <DropdownTrigger>
-                    <Button variant="bordered">
-                        {selectedAccount ? accounts.find(acc => acc.id === selectedAccount)?.name || "Unnamed Account" : "Select Account"}
-                    </Button>
-                </DropdownTrigger>
-                <DropdownMenu aria-label="Dynamic Actions" items={dropdownItems}>
-                    {(item) => (
-                        <DropdownItem
-                            key={item.key}
-                            color={item.key === "delete" ? "danger" : "default"}
-                            className={item.key === "delete" ? "text-danger" : ""}
-                            onClick={item.onClick} 
-                            endContent={item.icon} 
-                        >
-                            {item.label}
-                        </DropdownItem>
-                    )}
-                </DropdownMenu>
-            </Dropdown>
-
+            <div className={styles.dropdown}>
+                <Dropdown>
+                    <DropdownTrigger>
+                        <Button variant="bordered">
+                            {selectedAccount ? accounts.find(acc => acc.id === selectedAccount)?.name || "Unnamed Account" : "Select Account"}
+                        </Button>
+                    </DropdownTrigger>
+                    <DropdownMenu aria-label="Dynamic Actions" items={dropdownItems}>
+                        {(item) => (
+                            <DropdownItem
+                                key={item.key}
+                                color={item.key === "delete" ? "danger" : "default"}
+                                className={item.key === "delete" ? "text-danger" : ""}
+                                onClick={item.onClick} 
+                                endContent={item.icon} 
+                            >
+                                {item.label}
+                            </DropdownItem>
+                        )}
+                    </DropdownMenu>
+                </Dropdown>
+            </div>
             <div className={styles.topContent}>
                 <div className={styles.table}>
                     <Table color="secondary" selectionMode="single"  aria-label="Trades table" onRowAction={(trade) => setSelectedTrade(trade)}>
@@ -375,7 +505,15 @@ const handleUpdateAccount = async () => {
                                     <TableCell>{trade.type}</TableCell>
                                     <TableCell>${trade.entryPrice}</TableCell>
                                     <TableCell>${trade.exitPrice}</TableCell>
-                                    <TableCell>${trade.actualProfit}</TableCell>
+                                    <TableCell
+                                        className={`${
+                                            trade.actualProfit >= 0 ? 'text-green-500' : 'text-red-500'
+                                        }`}
+                                    >
+                                        {trade.actualProfit < 0
+                                            ? `-$${Math.abs(trade.actualProfit)}`
+                                            : `$${trade.actualProfit}`}
+                                    </TableCell>
                                     <TableCell>{trade.duration}</TableCell>
 
                                 </TableRow>
@@ -385,14 +523,14 @@ const handleUpdateAccount = async () => {
                 </div>
                 <div className={styles.tradeEntry}>
                     <div className={styles.selectGroup}>
-                        <Select size="sm" label="Symbol (symbol names)" className="w-full" aria-label="Select symbol" onChange={(e) => setSelectedSymbol(e.target.value)}>
+                        <Select size="sm" label="Symbol" className="w-full" aria-label="Select symbol" onChange={(e) => setSelectedSymbol(e.target.value)}>
                             {symbols.map((symbol) => (
                             <SelectItem key={symbol.key} value={symbol.key}>
                                 {symbol.label}
                             </SelectItem>
                         ))}
                     </Select>
-                        <Select size="sm" label="Trade Type (long or short)" className="w-full" aria-label="Select trade type" onChange={(e) => setSelectedTradeType(e.target.value)}>
+                        <Select size="sm" label="Type" className="w-full" aria-label="Select trade type" onChange={(e) => setSelectedTradeType(e.target.value)}>
                             {tradeTypes.map((tradeType) => (
                                 <SelectItem key={tradeType.key} value={tradeType.key}>
                                     {tradeType.label}
@@ -487,10 +625,17 @@ const handleUpdateAccount = async () => {
                             end: parseAbsoluteToLocal(new Date(new Date().setSeconds(0)).toISOString()),
                         }}
                         onChange={(value: any) => {
-                            setStartDate(value?.start ? value.start.toDate() : null);
-                            setEndDate(value?.end ? value.end.toDate() : null);
+                            // Convert custom date object to ISO string
+                            const isoStartDate = convertToISO(value?.start);
+                            const isoEndDate = convertToISO(value?.end);
+                        
+                            // Set state - they can now be either string or null
+                            setStartDate(isoStartDate || null); // If it's an empty string, set to null
+                            setEndDate(isoEndDate || null); // Same for end date
+                        
                         }}
                     />
+
 
                     
                     </div>
@@ -501,6 +646,7 @@ const handleUpdateAccount = async () => {
                             type="number"
                             label="Risk"
                             placeholder="0.00"
+                            value={risk.toFixed(2)} 
                             size='sm'
                             labelPlacement="inside"
                             aria-label="Risk Percent"
@@ -513,14 +659,30 @@ const handleUpdateAccount = async () => {
                         <Input
                             isReadOnly
                             type="number"
+                            label="Potential Loss"
+                            value={potentialLoss.toFixed(2)} 
+                            labelPlacement="inside"
+                            aria-label="Potential Profit"
+                            variant='flat'
+                            size='sm'
+                            color="danger"
+                            startContent={
+                                <div className="pointer-events-none flex items-center">
+                                    <span className="text-default-400 text-small">$</span>
+                                </div>
+                            }
+                        />
+                        <Input
+                            isReadOnly
+                            type="number"
                             label="Potential Profit"
                             value={potentialProfit.toFixed(2)} 
                             labelPlacement="inside"
                             aria-label="Potential Profit"
                             variant='flat'
                             size='sm'
-                            color={potentialProfit >= 0 ? 'success' : 'danger'}
-                            endContent={
+                            color="success"
+                            startContent={
                                 <div className="pointer-events-none flex items-center">
                                     <span className="text-default-400 text-small">$</span>
                                 </div>
@@ -536,7 +698,7 @@ const handleUpdateAccount = async () => {
                             size='sm'
                             variant='flat'
                             color={actualProfit >= 0 ? 'success' : 'danger'}
-                            endContent={
+                            startContent={
                                 <div className="pointer-events-none flex items-center">
                                     <span className="text-default-400 text-small">$</span>
                                 </div>
@@ -552,34 +714,46 @@ const handleUpdateAccount = async () => {
                 <StatsChart data={chartData()} />
             </div>
 
-            <Modal isOpen={showModal} onOpenChange={setShowModal}>
-                <ModalContent>
-                    <ModalHeader>{accountToEdit ? "Edit Account" : "Create New Account"}</ModalHeader>
-                    <ModalBody>
-                        <Input
-                            label="Account Name"
-                            value={accountToEdit ? accountToEdit.name : newAccountName}
-                            onChange={(e) => accountToEdit ? setAccountToEdit({...accountToEdit, name: e.target.value}) : setNewAccountName(e.target.value)}
-                        />
-                        <Input
-                            label="Starting Balance"
-                            type="number"
-                            value={accountToEdit ? accountToEdit.startingBalance : startingBalance}
-                            onChange={(e) => accountToEdit ? setAccountToEdit({...accountToEdit, startingBalance: Number(e.target.value)}) : setStartingBalance(Number(e.target.value))}
-                        />
-                        <Textarea
-                            label="Notes"
-                            value={accountToEdit ? accountToEdit.notes : notes}
-                            onChange={(e) => accountToEdit ? setAccountToEdit({...accountToEdit, notes: e.target.value}) : setNotes(e.target.value)}
-                        />
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button onClick={accountToEdit ? handleUpdateAccount : handleSubmitAccount}>
-                            {accountToEdit ? "Update Account" : "Create Account"}
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
+            <Modal isOpen={showModal} onOpenChange={(isOpen) => {
+                setShowModal(isOpen);
+                if (!isOpen) {
+                    resetModalState(); // Reset state when modal is closed
+                }
+            }}>
+    <ModalContent>
+        <ModalHeader>{accountToEdit ? "Edit Account" : "Create New Account"}</ModalHeader>
+        <ModalBody>
+            <Input
+                label="Account Name"
+                value={accountToEdit ? accountToEdit.name : newAccountName}
+                onChange={(e) => accountToEdit ? setAccountToEdit({...accountToEdit, name: e.target.value}) : setNewAccountName(e.target.value)}
+            />
+            <Input
+                label="Starting Balance"
+                type="number"
+                value={accountToEdit ? accountToEdit.startingBalance : startingBalance}
+                onChange={(e) => accountToEdit ? setAccountToEdit({...accountToEdit, startingBalance: Number(e.target.value)}) : setStartingBalance(Number(e.target.value))}
+            />
+            <Textarea
+                label="Notes"
+                value={accountToEdit ? accountToEdit.notes : notes}
+                onChange={(e) => accountToEdit ? setAccountToEdit({...accountToEdit, notes: e.target.value}) : setNotes(e.target.value)}
+            />
+        </ModalBody>
+        <ModalFooter>
+            {accountToEdit && (
+                <Button color="default" onClick={() => handleDeleteAccount(accountToEdit.id)}>
+                    Delete Account
+                </Button>
+            )}
+            <Button color="secondary" onClick={accountToEdit ? handleUpdateAccount : handleSubmitAccount}>
+                {accountToEdit ? "Update Account" : "Create Account"}
+            </Button>
+
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
         </div>
     );
 };
