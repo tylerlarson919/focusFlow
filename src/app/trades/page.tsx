@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import StatsChart from './statsCharts'
-import styles from './page.module.css'; // Adjust the path based on your directory structure
+import styles from './page.module.css'; 
 import HeaderMain from '../components/header';
 import {
     Input,
@@ -21,16 +21,26 @@ import {
     DropdownMenu,
     DropdownItem,
     Modal,
+    ModalContent,
     ModalBody,
     ModalHeader,
     ModalFooter,
     Textarea 
 } from "@nextui-org/react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { db } from '../../../firebase'; // Import your Firebase config
-import { Firestore, collection, getDocs, query, where, addDoc, setDoc, doc } from "firebase/firestore"; // Import Firestore functions
+import { db } from '../../../firebase'; 
+import { Firestore, collection, getDocs, query, where, addDoc, setDoc, doc, deleteDoc } from "firebase/firestore"; 
 import { cp } from 'fs';
 import {parseZonedDateTime, parseAbsoluteToLocal} from "@internationalized/date";
+import { FaEllipsisVertical } from "react-icons/fa6";
+import { LuTrash } from "react-icons/lu";
+
+interface DropdownItemType {
+    key: string;
+    label: string;
+    onClick: () => void;
+    icon?: React.ReactNode; 
+}
 
 const Trades: React.FC = () => {
     const [startDate, setStartDate] = useState<Date | null>(null);
@@ -46,16 +56,17 @@ const Trades: React.FC = () => {
     const [potentialProfit, setPotentialProfit] = useState<number>(0);
     const [actualProfit, setActualProfit] = useState<number>(0);
     const [userId, setUserId] = useState<string | null>(null);
-    const [trades, setTrades] = useState<any[]>([]); // Replace `any` with your trade type
+    const [trades, setTrades] = useState<any[]>([]); 
+    const [selectedTrade, setSelectedTrade] = useState<any>(null);
     const auth = getAuth();
-    const [accounts, setAccounts] = useState<any[]>([]); // Replace `any` with your account type
+    const [accounts, setAccounts] = useState<any[]>([]); 
     const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
     const [showModal, setShowModal] = useState<boolean>(false);
     const [newAccountName, setNewAccountName] = useState<string>("");
+    const [accountToEdit, setAccountToEdit] = useState<any | null>(null);
     const [startingBalance, setStartingBalance] = useState<number>(0);
     const [notes, setNotes] = useState<string>("");
 
-    // Chart data function
     const chartData = () => {
         return trades.map(trade => ({
             symbol: trade.symbol,
@@ -64,68 +75,122 @@ const Trades: React.FC = () => {
             type: trade.type,
             duration: trade.duration,
             profitLoss: trade.exitPrice - trade.entryPrice,
-            // Add more fields as needed
         })) || [];
     };
 
     const fetchAccounts = async (uid: string) => {
-        if (!uid) return; // Ensure uid is not null
+        if (!uid) {
+            console.log("User ID is not defined");
+            return;
+        }
     
         try {
-            const accountsCollection = collection(db, "trades", uid, "accounts");
+            const accountsCollection = collection(db, "trades", `"${uid}"`, "accounts"); 
             const querySnapshot = await getDocs(accountsCollection);
-            const accountsData = querySnapshot.docs.map(doc => {
-                const data = doc.data();
-                return { id: doc.id, name: typeof data.name === 'string' ? data.name : 'Unnamed Account' };
-            });
-            setAccounts(accountsData);
-            const lastAccount = localStorage.getItem("selectedAccount");
-            setSelectedAccount(lastAccount ? lastAccount : accountsData[0]?.id); 
+    
+            if (querySnapshot.empty) {
+                console.log("No accounts found for user:", uid);
+            } else {
+                const accountsData = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    name: typeof doc.data().name === 'string' ? doc.data().name : 'Unnamed Account',
+                    startingBalance: doc.data().startingBalance || 0, 
+                    notes: doc.data().description || "" 
+                }));
+    
+                setAccounts(accountsData);
+    
+                const lastAccount = localStorage.getItem("selectedAccount");
+                const initialAccountId = lastAccount ? lastAccount : accountsData[0]?.id;
+                setSelectedAccount(initialAccountId);
+                
+                // Fetch trades for the initially selected account
+                if (initialAccountId && userId) {
+                    fetchTrades(userId); 
+                }
+            }
         } catch (error) {
             console.error("Error fetching accounts:", error);
         }
     };
     
-    
-    async function checkAndCreateAccount(db: Firestore) {
-        try {
-            // Reference the accounts collection
-            const accountsRef = collection(db, "accounts");
-            
-            // Get the existing accounts
-            const querySnapshot = await getDocs(accountsRef);
-            
-            // Check if any accounts exist
-            if (querySnapshot.empty) {
-                // No accounts exist, create a new one
-                await addDoc(accountsRef, {
-                    // Replace with your account data structure
-                    name: "Default Account",
-                    balance: 0,
-                    createdAt: new Date(),
-                });
-                console.log("No accounts found. Created a new account.");
-            } else {
-                // Accounts exist, process them as needed
-                querySnapshot.forEach((doc) => {
-                    console.log(doc.id, " => ", doc.data());
-                });
-            }
-        } catch (error) {
-            console.error("Error checking or creating accounts: ", error);
+    // Add this effect to fetch trades when selectedAccount changes
+    useEffect(() => {
+        if (selectedAccount && userId) {
+            fetchTrades(userId);
         }
+    }, [selectedAccount, userId]);
+    
+    const dropdownItems: DropdownItemType[] = accounts.length > 0 
+    ? accounts.map(account => ({
+        key: account.id,
+        label: account.name,
+        onClick: () => {
+            setSelectedAccount(account.id);
+            localStorage.setItem("selectedAccount", account.id);
+            
+            if (userId) {
+                fetchTrades(userId); // Call only if userId is not null
+            } else {
+                console.error("User ID is null");
+                // Handle the case where userId is null (e.g., show an alert)
+            }
+        },
+        icon: (
+            <FaEllipsisVertical 
+                onClick={(e) => {
+                    e.stopPropagation(); 
+                    setAccountToEdit(account); 
+                    setShowModal(true); 
+                }} 
+                className="ml-2 text-gray-500 cursor-pointer" 
+            />
+        )
+    }))
+    : [{ key: "no-accounts", label: "No Accounts", onClick: () => {} } as DropdownItemType];
+    
+    dropdownItems.push({
+        key: "new-account",
+        label: "New Account",
+        onClick: () => setShowModal(true),
+        icon: null 
+    });
+
+const handleDeleteAccount = async (id: string) => {
+    if (!userId) {
+        console.error("User ID is null. Cannot delete account.");
+        return; 
     }
     
 
-    const handleAccountSelect = (accountId: string) => {
-        setSelectedAccount(accountId);
-        localStorage.setItem("selectedAccount", accountId); // Store selected account in local storage
-        // Add logic here to update the trade path based on the selected account
+    const accountsCollection = collection(db, "trades", userId, "accounts");
+    await deleteDoc(doc(accountsCollection, id));
+    fetchAccounts(userId); 
+    setShowModal(false);
+};
+
+const handleUpdateAccount = async () => {
+    if (!userId || !accountToEdit) return;
+
+    const updatedAccount = {
+        userId,
+        name: newAccountName,
+        startingBalance,
+        notes,
     };
 
+    try {
+        const accountsCollection = collection(db, "trades", userId, "accounts");
+        await setDoc(doc(accountsCollection, accountToEdit.id), updatedAccount); 
+        fetchAccounts(userId); 
+        setShowModal(false); 
+    } catch (error) {
+        console.error("Error updating account:", error);
+    }
+};
 
     const handleSubmitAccount = async () => {
-        if (!userId) return;
+        if (!userId || !newAccountName) return; 
     
         const newAccount = {
             userId,
@@ -133,11 +198,10 @@ const Trades: React.FC = () => {
             startingBalance,
             notes,
         };
-    
         try {
-            const accountsCollection = collection(db, "trades", userId, "accounts"); // Adjusted path
+            const accountsCollection = collection(db, "trades", `"${userId}"`, "accounts"); 
             await addDoc(accountsCollection, newAccount);
-            fetchAccounts(userId); 
+            await fetchAccounts(userId); 
             setShowModal(false); 
             setNewAccountName(""); 
             setStartingBalance(0);
@@ -146,72 +210,41 @@ const Trades: React.FC = () => {
             console.error("Error submitting account:", error);
         }
     };
-    
-
-
-
     const symbols = [
         { key: 'AAPL', label: 'Apple (AAPL)' },
         { key: 'TSLA', label: 'Tesla (TSLA)' },
         { key: 'GOOGL', label: 'Alphabet (GOOGL)' },
-        // Add more symbols as needed
     ];
-
     const tradeTypes = [
         { key: 'long', label: 'Long' },
         { key: 'short', label: 'Short' },
     ];
-
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 setUserId(user.uid);
-                await checkAndCreateTradesCollection(user.uid); // Check and create trades collection
-                fetchAccounts(user.uid); // Fetch accounts for the user
+                await fetchAccounts(user.uid); // Wait for accounts to fetch
             } else {
                 setUserId(null);
-                setTrades([]);
                 setAccounts([]);
             }
         });
-    
         return () => unsubscribe();
     }, [auth]);
     
-    const checkAndCreateTradesCollection = async (uid: string) => {
+    const fetchTrades = async (uid: string) => {
         if (!selectedAccount) {
             console.error("No account selected.");
-            return; // Exit if selectedAccount is null
+            return;
         }
     
-        const tradesCollection = collection(db, "trades", uid, selectedAccount, "trades");
-        const querySnapshot = await getDocs(tradesCollection); // Use tradesCollection here
-    
-        // If the collection doesn't exist, create it
-        if (querySnapshot.empty) {
-            const accountId = "Account1"; // Change this if you want to set a different default account ID
-            const accountDocRef = doc(db, "trades", uid, accountId, "info");
-            
-            await setDoc(accountDocRef, {
-                userId: uid,
-                name: accountId,
-                startingBalance: 0,
-                notes: "Default Account",
-            });
-    
-            console.log("Default account created for user:", uid);
-        }
-    };
-    
-    
-    
-
-    const fetchTrades = async (uid: string) => {
         try {
-            const accountsCollection = collection(db, "accounts");
-            const q = query(accountsCollection, where("userId", "==", uid), where('info', '!=', null));
-            const querySnapshot = await getDocs(q);
+            const tradesCollection = collection(db, "trades", `"${uid}"`, "accounts", selectedAccount, "trades");
+    
+            console.log("Fetching trades from: ", tradesCollection);
+            const querySnapshot = await getDocs(tradesCollection);
             const tradesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("Trades fetched:", tradesData); 
             setTrades(tradesData);
         } catch (error) {
             console.error("Error fetching trades:", error);
@@ -221,7 +254,7 @@ const Trades: React.FC = () => {
     const handleSubmitTrade = async () => {
         if (!userId || !selectedAccount) {
             console.error("User ID or selected account is missing.");
-            return;  // Exit if either is missing
+            return;  
         }
     
         const newTrade = {
@@ -236,27 +269,22 @@ const Trades: React.FC = () => {
             risk,
             potentialProfit,
             actualProfit,
-            startDate, // Use state variable
-            endDate,   // Use state variable
+            startDate, 
+            endDate,   
         };
     
         try {
-            // Ensure valid collection reference
-            const tradesCollection = collection(db, "trades", userId, selectedAccount, "trades");
-            await addDoc(tradesCollection, newTrade); // Add trade to the selected account's trades collection
-            fetchTrades(userId); // Refresh trades after submission
+            const tradesCollection = collection(db, "trades", `"${userId}"`, "accounts", selectedAccount, "trades");
+            await addDoc(tradesCollection, newTrade); 
+            fetchTrades(userId); 
         } catch (error) {
             console.error("Error submitting trade:", error);
         }
         console.log("User ID:", userId);
         console.log("Selected Account:", selectedAccount);
     };
-    
-    
-    
 
     useEffect(() => {
-        // Calculate potential profit based on trade type
         if (entryPrice && takeProfit) {
             if (selectedTradeType === 'long') {
                 setPotentialProfit((takeProfit - entryPrice) * shares);
@@ -267,7 +295,6 @@ const Trades: React.FC = () => {
             setPotentialProfit(0);
         }
     
-        // Calculate actual profit based on trade type
         if (entryPrice && exitPrice) {
             if (selectedTradeType === 'long') {
                 setActualProfit((exitPrice - entryPrice) * shares);
@@ -278,9 +305,21 @@ const Trades: React.FC = () => {
             setActualProfit(0);
         }
     }, [entryPrice, takeProfit, exitPrice, shares, selectedTradeType]);
-    
-    
 
+    const handleDeleteTrade = async (tradeId: string) => {
+        if (!userId || !selectedAccount) {
+            console.error("User ID or selected account is missing.");
+            return;  
+        }
+    
+        const tradesCollection = collection(db, "trades", `"${userId}"`, "accounts", selectedAccount, "trades");
+        try {
+            await deleteDoc(doc(tradesCollection, tradeId));
+            fetchTrades(userId); 
+        } catch (error) {
+            console.error("Error deleting trade:", error);
+        }
+    };
 
     return (
         <div className={styles.bg}>
@@ -293,23 +332,26 @@ const Trades: React.FC = () => {
                         {selectedAccount ? accounts.find(acc => acc.id === selectedAccount)?.name || "Unnamed Account" : "Select Account"}
                     </Button>
                 </DropdownTrigger>
-                <DropdownMenu aria-label="Select Account">
-                    <>
-                    {accounts.map(account => (
-                        <DropdownItem key={account.id} onClick={() => handleAccountSelect(account.id)}>
-                            {typeof account.name === 'string' ? account.name : 'Unnamed Account'}
+                <DropdownMenu aria-label="Dynamic Actions" items={dropdownItems}>
+                    {(item) => (
+                        <DropdownItem
+                            key={item.key}
+                            color={item.key === "delete" ? "danger" : "default"}
+                            className={item.key === "delete" ? "text-danger" : ""}
+                            onClick={item.onClick} 
+                            endContent={item.icon} 
+                        >
+                            {item.label}
                         </DropdownItem>
-                    ))}
-                    <DropdownItem key="new-account" onClick={() => setShowModal(true)}>
-                        New Account
-                    </DropdownItem>
-                    </>
+                    )}
                 </DropdownMenu>
             </Dropdown>
+
             <div className={styles.topContent}>
                 <div className={styles.table}>
-                    <Table aria-label="Trades table">
+                    <Table color="secondary" selectionMode="single"  aria-label="Trades table" onRowAction={(trade) => setSelectedTrade(trade)}>
                         <TableHeader>
+                            <TableColumn>Actions</TableColumn>
                             <TableColumn>Symbol</TableColumn>
                             <TableColumn>Type</TableColumn>
                             <TableColumn>Entry Price</TableColumn>
@@ -320,12 +362,22 @@ const Trades: React.FC = () => {
                         <TableBody>
                             {trades.map((trade) => (
                                 <TableRow key={trade.id}>
+                                    <TableCell>
+                                        <LuTrash  
+                                            className="cursor-pointer" 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteTrade(trade.id); 
+                                            }} 
+                                        />
+                                    </TableCell>
                                     <TableCell>{trade.symbol}</TableCell>
                                     <TableCell>{trade.type}</TableCell>
                                     <TableCell>${trade.entryPrice}</TableCell>
                                     <TableCell>${trade.exitPrice}</TableCell>
                                     <TableCell>${trade.actualProfit}</TableCell>
                                     <TableCell>{trade.duration}</TableCell>
+
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -355,8 +407,8 @@ const Trades: React.FC = () => {
                             labelPlacement="inside"
                             aria-label="# of Shares"
                             className="w-full"
-                            value={shares !== null ? shares.toString() : '0'} // Convert to string
-                            onChange={(e) => setShares(Number(e.target.value))} // Update shares state
+                            value={shares !== null ? shares.toString() : '0'} 
+                            onChange={(e) => setShares(Number(e.target.value))} 
                     />
                     </div>
                     <div className={styles.priceGroup}>
@@ -367,7 +419,7 @@ const Trades: React.FC = () => {
                             labelPlacement="inside"
                             aria-label="Entry price"
                             size='sm'
-                            value={entryPrice !== null ? entryPrice.toString() : ''} // Convert to string
+                            value={entryPrice !== null ? entryPrice.toString() : ''} 
                             onChange={(e) => setEntryPrice(Number(e.target.value))}
                             endContent={
                                 <div className="pointer-events-none flex items-center">
@@ -382,7 +434,7 @@ const Trades: React.FC = () => {
                             size='sm'
                             labelPlacement="inside"
                             aria-label="Exit price"
-                            value={exitPrice !== null ? exitPrice.toString() : ''} // Convert to string
+                            value={exitPrice !== null ? exitPrice.toString() : ''} 
                             onChange={(e) => setExitPrice(Number(e.target.value))}
                             endContent={
                                 <div className="pointer-events-none flex items-center">
@@ -399,8 +451,8 @@ const Trades: React.FC = () => {
                             size='sm'
                             labelPlacement="inside"
                             aria-label="Stop Loss"
-                            value={stopLoss !== null ? stopLoss.toString() : ''} // Convert to string for controlled input
-                            onChange={(e) => setStopLoss(Number(e.target.value))} // Update stop loss state
+                            value={stopLoss !== null ? stopLoss.toString() : ''} 
+                            onChange={(e) => setStopLoss(Number(e.target.value))} 
                             endContent={
                                 <div className="pointer-events-none flex items-center">
                                     <span className="text-default-400 text-small">$</span>
@@ -413,8 +465,8 @@ const Trades: React.FC = () => {
                             placeholder="0.00"
                             size='sm'
                             labelPlacement="inside"
-                            value={takeProfit !== null ? takeProfit.toString() : ''} // Convert to string
-                            onChange={(e) => setTakeProfit(Number(e.target.value))} // Capture value
+                            value={takeProfit !== null ? takeProfit.toString() : ''} 
+                            onChange={(e) => setTakeProfit(Number(e.target.value))} 
                             aria-label="Take Profit"
                             endContent={
                                 <div className="pointer-events-none flex items-center">
@@ -462,7 +514,7 @@ const Trades: React.FC = () => {
                             isReadOnly
                             type="number"
                             label="Potential Profit"
-                            value={potentialProfit.toFixed(2)} // Display calculated value
+                            value={potentialProfit.toFixed(2)} 
                             labelPlacement="inside"
                             aria-label="Potential Profit"
                             variant='flat'
@@ -478,7 +530,7 @@ const Trades: React.FC = () => {
                             isReadOnly
                             type="number"
                             label="Actual Profit"
-                            value={actualProfit.toFixed(2)} // Display calculated value
+                            value={actualProfit.toFixed(2)} 
                             labelPlacement="inside"
                             aria-label="Actual Profit"
                             size='sm'
@@ -500,39 +552,35 @@ const Trades: React.FC = () => {
                 <StatsChart data={chartData()} />
             </div>
 
-            <Modal isOpen={showModal} onClose={() => setShowModal(false)}>
-                <ModalHeader>Create New Account</ModalHeader>
-                <ModalBody>
-                    <Input
-                        label="Account Name"
-                        value={newAccountName}
-                        onChange={(e) => setNewAccountName(e.target.value)}
-                    />
-                    <Input
-                    type="number"
-                    size="sm"
-                    label="Starting Balance"
-                    placeholder="0"
-                    value={startingBalance !== null ? startingBalance.toString() : '0'} // Convert to string
-                    onChange={(e) => setStartingBalance(Number(e.target.value))}
-                    />
-                    <Textarea
-                        label="Notes"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                    />
-                </ModalBody>
-                <ModalFooter>
-                    <Button onClick={handleSubmitAccount}>Submit</Button>
-                    <Button onClick={() => setShowModal(false)}>Cancel</Button>
-                </ModalFooter>
+            <Modal isOpen={showModal} onOpenChange={setShowModal}>
+                <ModalContent>
+                    <ModalHeader>{accountToEdit ? "Edit Account" : "Create New Account"}</ModalHeader>
+                    <ModalBody>
+                        <Input
+                            label="Account Name"
+                            value={accountToEdit ? accountToEdit.name : newAccountName}
+                            onChange={(e) => accountToEdit ? setAccountToEdit({...accountToEdit, name: e.target.value}) : setNewAccountName(e.target.value)}
+                        />
+                        <Input
+                            label="Starting Balance"
+                            type="number"
+                            value={accountToEdit ? accountToEdit.startingBalance : startingBalance}
+                            onChange={(e) => accountToEdit ? setAccountToEdit({...accountToEdit, startingBalance: Number(e.target.value)}) : setStartingBalance(Number(e.target.value))}
+                        />
+                        <Textarea
+                            label="Notes"
+                            value={accountToEdit ? accountToEdit.notes : notes}
+                            onChange={(e) => accountToEdit ? setAccountToEdit({...accountToEdit, notes: e.target.value}) : setNotes(e.target.value)}
+                        />
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button onClick={accountToEdit ? handleUpdateAccount : handleSubmitAccount}>
+                            {accountToEdit ? "Update Account" : "Create Account"}
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
             </Modal>
-
-
         </div>
-
-    
     );
 };
-
 export default Trades;
