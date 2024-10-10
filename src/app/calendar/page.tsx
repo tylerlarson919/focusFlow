@@ -4,10 +4,10 @@ import React, { useState, useEffect, useCallback, Component, useRef } from "reac
 import { Calendar, dateFnsLocalizer, Views, View } from "react-big-calendar";
 import { useDrag, useDrop } from 'react-dnd';
 import { format } from 'date-fns';
-import parse from "date-fns/parse";
-import startOfWeek from "date-fns/startOfWeek";
-import getDay from "date-fns/getDay";
-import enUS from "date-fns/locale/en-US";
+import { parse } from "date-fns/parse";
+import {startOfWeek} from "date-fns/startOfWeek";
+import {getDay} from "date-fns/getDay";
+import {enUS} from "date-fns/locale/en-US";
 import HeaderMain from "../components/header";
 import { Button, ButtonGroup, DropdownMenu, Dropdown, DropdownTrigger, DropdownItem } from "@nextui-org/react";
 import "./react-big-calendar.css";

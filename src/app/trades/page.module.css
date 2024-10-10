@@ -9,8 +9,13 @@
     gap: 20px;
     overflow-x: hidden;
     padding-bottom: 20px;
-
 }
+.dropdown {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+
 .header {
     top: 0;
     z-index: 49;
@@ -21,15 +26,12 @@
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-    padding: 20px;
-    background-color: var(--dark2);
-    border-radius: 25px;
     width: 100%;
-    gap: 20px;
+    padding: 20px;
 }
 
 .table {
-    width: 66%;
+    width: 100%;
 }
 .selectGroup, .priceGroup, .statsGroup {
     display: flex;
@@ -38,7 +40,7 @@
 }
 
 .tradeEntry {
-    width: 33%;
+    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 20px;

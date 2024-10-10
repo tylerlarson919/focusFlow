@@ -3,7 +3,6 @@ import { initializeApp } from "firebase/app";
 import { query, where, getFirestore, collection, addDoc, getDocs, getDoc, doc, writeBatch, setDoc } from "firebase/firestore";
 import { subHours } from 'date-fns';
 import { getAuth } from 'firebase/auth';
-
 import { getStorage } from "firebase/storage"; // Import Firebase Storage
 
 // Your web app's Firebase configuration
@@ -187,6 +186,29 @@ export const getTasks = async () => {
     console.error("Error getting tasks: ", e);
   }
 };
+
+
+export const uploadImageToStorage = async (file) => {
+  console.log("Uploading file:", file.name); // Log file name
+  
+  const storageRef = ref(storage, `images/${file.name}`); // Create a reference for the file
+  try {
+    await uploadBytes(storageRef, file); // Upload the file
+    console.log("File uploaded successfully:", file.name);
+
+    const url = await getDownloadURL(storageRef); // Get the file's download URL
+    console.log("Download URL:", url); // Log the download URL
+
+    return url; // Return the download URL
+  } catch (error) {
+    console.error("Error uploading file:", error); // Log any errors
+    throw error; // Rethrow the error for further handling
+  }
+};
+
+
+
+
 
 // Export the initialized Firebase app, auth, and db
 export { app, db, storage, tasksCollection, habitsCollection };

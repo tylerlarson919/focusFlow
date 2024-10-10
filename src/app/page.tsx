@@ -357,7 +357,7 @@ useEffect(() => {
         task={selectedTask}   // Add this line to pass the selected session
       />
 
-      <Modal placement='center' size="4xl" isOpen={isOpen} onOpenChange={onOpenChange}>
+      <Modal placement='center' isDismissable={false} size="4xl" isOpen={isOpen} onOpenChange={onOpenChange}>
       <ModalContent>
         {(onClose) => {
           const handleSave = async () => {

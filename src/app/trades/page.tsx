@@ -25,15 +25,20 @@ import {
     ModalBody,
     ModalHeader,
     ModalFooter,
-    Textarea 
+    Textarea,
+    ScrollShadow
 } from "@nextui-org/react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from '../../../firebase'; 
-import { Firestore, collection, getDocs, query, where, addDoc, setDoc, doc, deleteDoc } from "firebase/firestore"; 
+import { Firestore, collection, getDocs, query, where, addDoc, setDoc, doc, deleteDoc, updateDoc } from "firebase/firestore"; 
 import { cp } from 'fs';
 import {parseZonedDateTime, parseAbsoluteToLocal} from "@internationalized/date";
 import { FaEllipsisVertical } from "react-icons/fa6";
 import { LuTrash } from "react-icons/lu";
+import { MdEdit } from "react-icons/md";
+import App from './App'; // Import your App component
+
+
 
 interface DropdownItemType {
     key: string;
@@ -43,9 +48,10 @@ interface DropdownItemType {
 }
 
 
+
 const Trades: React.FC = () => {
     const [startDate, setStartDate] = useState<string | null>(null);
-    const [endDate, setEndDate] = useState<string | null>(null);    
+    const [endDate, setEndDate] = useState<string | null>(null);  
     const [selectedSymbol, setSelectedSymbol] = useState<string>("");
     const [selectedTradeType, setSelectedTradeType] = useState<string>("");
     const [entryPrice, setEntryPrice] = useState<number>(0);
@@ -60,21 +66,25 @@ const Trades: React.FC = () => {
     const [actualProfit, setActualProfit] = useState<number>(0);
     const [userId, setUserId] = useState<string | null>(null);
     const [trades, setTrades] = useState<any[]>([]); 
-    const [selectedTrade, setSelectedTrade] = useState<any>(null);
     const auth = getAuth();
     const [accounts, setAccounts] = useState<any[]>([]); 
     const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
     const [showModal, setShowModal] = useState<boolean>(false);
+    const [showTradeModal, setShowTradeModal] = useState<boolean>(false);
     const [newAccountName, setNewAccountName] = useState<string>("");
+    const [newTradeName, setNewTradeName] = useState<string>("");
     const [accountToEdit, setAccountToEdit] = useState<any | null>(null);
+    const [tradeToEdit, setTradeToEdit] = useState<any | null>(null);
     const [startingBalance, setStartingBalance] = useState<number>(0);
     const [notes, setNotes] = useState<string>("");
+    const [value, setValue] = useState<string | undefined>("**Hello world!!!**");
+    const markdownText = `# Hello, World!\n\nJust a link: [NASA](https://www.nasa.gov).`; // Define your markdown text
 
     const chartData = () => {
         return {
             accountBalance, 
             startingBalance,
-            trades: trades.map(trade => ({
+            trades: sortedTrades.map(trade => ({
                 symbol: trade.symbol,
                 entryPrice: trade.entryPrice,
                 exitPrice: trade.exitPrice,
@@ -181,12 +191,33 @@ const Trades: React.FC = () => {
         icon: null 
     });
 
+    const handleEditTrade = (trade: any) => {
+        setTradeToEdit(trade); // Set the trade you want to edit
+        setSelectedSymbol(trade.symbol); // Set the selected symbol to the trade's symbol
+        setSelectedTradeType(trade.type); // Set the selected trade type to the trade's type
+        setStartDate(trade.startDate); // Set the start date if needed
+        setEndDate(trade.endDate); // Set the end date if needed
+        setShowTradeModal(true); // Open the modal
+    };
+
     const resetModalState = () => {
         setAccountToEdit(null); // Reset to null or initial state
         setNewAccountName(""); // Reset input field
         setStartingBalance(0); // Reset input field to initial value
         setNotes(""); // Reset input field
         setSelectedAccount(null); // Reset selected account if needed
+
+        setNewTradeName("");
+        setSelectedTradeType("");
+        setSelectedSymbol("");
+        setTradeToEdit(null);
+        setStartDate(null);
+        setEndDate(null);
+        setTakeProfit(0);
+        setStopLoss(0);
+        setExitPrice(0);
+        setEntryPrice(0);
+        setShares(0);
     };
 
 const handleDeleteAccount = async (id: string) => {
@@ -201,6 +232,24 @@ const handleDeleteAccount = async (id: string) => {
     fetchAccounts(userId); 
     setShowModal(false);
     setSelectedAccount(null);
+};
+
+
+const handleDeleteTrade = async (id: string) => {
+    if (!userId || !selectedAccount) {
+        console.error("User ID or selected account is missing. Cannot delete trade.");
+        return; 
+    }
+
+    try {
+        const tradesCollection = collection(db, "trades", `"${userId}"`, "accounts", selectedAccount, "trades");
+        await deleteDoc(doc(tradesCollection, id)); // Delete trade by ID
+        fetchTrades(userId); // Refresh the trade list after deletion
+        setShowTradeModal(false); // Close the modal
+        setTradeToEdit(null); // Reset the selected trade
+    } catch (error) {
+        console.error("Error deleting trade:", error);
+    }
 };
 
 const handleUpdateAccount = async () => {
@@ -244,6 +293,63 @@ const handleUpdateAccount = async () => {
             console.error("Error submitting account:", error);
         }
     };
+
+    const handleUpdateTrade = async () => {
+        if (!userId || !tradeToEdit || !selectedAccount) {
+            console.error("User ID, trade to edit, or selected account is missing.");
+            return;  
+        }
+    
+        const isoStartDate = startDate ? new Date(startDate).toISOString() : null;
+        const isoEndDate = endDate ? new Date(endDate).toISOString() : null;
+    
+        const calculateTradeDuration = (start: string | null, end: string | null): string | null => {
+            if (!start || !end) return null; 
+            
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            const durationInMillis = endDate.getTime() - startDate.getTime(); 
+            const hours = Math.floor((durationInMillis / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((durationInMillis / (1000 * 60)) % 60);
+            
+            if (hours === 0) {
+                return `${minutes}m`; 
+            } else {
+                return `${hours}h ${minutes}m`; 
+            }
+        };
+        
+        const tradeDuration = calculateTradeDuration(startDate, endDate);
+    
+        const updatedTrade = {
+            ...tradeToEdit,
+            symbol: selectedSymbol,
+            type: selectedTradeType,
+            entryPrice,
+            exitPrice,
+            stopLoss,
+            takeProfit,
+            shares,
+            risk,
+            potentialProfit,
+            actualProfit,
+            startDate: isoStartDate,
+            endDate: isoEndDate,
+            duration: tradeDuration,
+        };
+    
+        try {
+            const tradesCollection = collection(db, "trades", `"${userId}"`, "accounts", selectedAccount, "trades");
+            await updateDoc(doc(tradesCollection, tradeToEdit.id), updatedTrade); // Update trade
+            fetchTrades(userId); // Refresh the trade list after update
+            setShowTradeModal(false); // Close the modal
+            setTradeToEdit(null); // Reset the selected trade
+        } catch (error) {
+            console.error("Error updating trade:", error);
+        }
+    };
+    
+
     const symbols = [
         { key: 'ESM', label: 'ESM' },
         { key: 'NQM', label: 'NQM' },
@@ -352,6 +458,7 @@ const handleUpdateAccount = async () => {
         try {
             const tradesCollection = collection(db, "trades", `"${userId}"`, "accounts", selectedAccount, "trades");
             await addDoc(tradesCollection, newTrade); 
+            setShowTradeModal(false);
             fetchTrades(userId); 
         } catch (error) {
             console.error("Error submitting trade:", error);
@@ -369,7 +476,7 @@ const handleUpdateAccount = async () => {
     
     
     useEffect(() => {
-        if (entryPrice && takeProfit) {
+        if (entryPrice && takeProfit && shares) {
             const multiplier = symbols.some(symbol => symbol.key === selectedSymbol) ? 50 : 1;
     
             if (selectedTradeType === 'long') {
@@ -394,6 +501,19 @@ const handleUpdateAccount = async () => {
         }
     }, [entryPrice, takeProfit, exitPrice, shares, selectedTradeType, selectedSymbol]);
     
+    useEffect(() => {
+        if (tradeToEdit) {
+            setShares(tradeToEdit.shares);
+            setEntryPrice(tradeToEdit.entryPrice);
+            setExitPrice(tradeToEdit.exitPrice);
+            setStopLoss(tradeToEdit.stopLoss);
+            setTakeProfit(tradeToEdit.takeProfit);
+            setSelectedTradeType(tradeToEdit.type);
+            setSelectedSymbol(tradeToEdit.symbol);
+        }
+    }, [tradeToEdit]);
+
+
     useEffect(() => {
         if (entryPrice && stopLoss) {
             const multiplier = symbols.some(symbol => symbol.key === selectedSymbol) ? 50 : 1;
@@ -423,23 +543,6 @@ const handleUpdateAccount = async () => {
     
     
     
-    
-
-    const handleDeleteTrade = async (tradeId: string) => {
-        if (!userId || !selectedAccount) {
-            console.error("User ID or selected account is missing.");
-            return;  
-        }
-    
-        const tradesCollection = collection(db, "trades", `"${userId}"`, "accounts", selectedAccount, "trades");
-        try {
-            await deleteDoc(doc(tradesCollection, tradeId));
-            fetchTrades(userId); 
-        } catch (error) {
-            console.error("Error deleting trade:", error);
-        }
-    };
-
     const convertToISO = (customDate: any): string => {
         if (!customDate) return ""; 
     
@@ -450,6 +553,14 @@ const handleUpdateAccount = async () => {
         return date.toISOString(); 
     };
     
+    const sortedTrades = trades.sort((a, b) => {
+        const dateA = a.startDate ? new Date(a.startDate).getTime() : 0; // Default to 0 if undefined
+        const dateB = b.startDate ? new Date(b.startDate).getTime() : 0; // Default to 0 if undefined
+        return dateA - dateB; // Sort in descending order
+    });
+    
+
+
     return (
         <div className={styles.bg}>
             <div className={styles.header}>
@@ -476,10 +587,13 @@ const handleUpdateAccount = async () => {
                         )}
                     </DropdownMenu>
                 </Dropdown>
+                <Button color="secondary" variant="faded" onClick={() => setShowTradeModal(true)} aria-label="Submit trade">
+                    New Trade
+                </Button>
             </div>
             <div className={styles.topContent}>
                 <div className={styles.table}>
-                    <Table color="secondary" selectionMode="single"  aria-label="Trades table" onRowAction={(trade) => setSelectedTrade(trade)}>
+                    <Table color="secondary" selectionMode="single"  aria-label="Trades table" onRowAction={(trade) => setTradeToEdit(trade)}>
                         <TableHeader>
                             <TableColumn>Actions</TableColumn>
                             <TableColumn>Symbol</TableColumn>
@@ -490,16 +604,23 @@ const handleUpdateAccount = async () => {
                             <TableColumn>Duration</TableColumn>
                         </TableHeader>
                         <TableBody>
-                            {trades.map((trade) => (
+                            {sortedTrades.map((trade) => (
                                 <TableRow key={trade.id}>
-                                    <TableCell>
-                                        <LuTrash  
-                                            className="cursor-pointer" 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteTrade(trade.id); 
-                                            }} 
-                                        />
+                                    <TableCell className="flex flex-row gap-3">
+                                                <LuTrash  
+                                                    className="cursor-pointer" 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteTrade(trade.id); 
+                                                    }} 
+                                                />
+                                                <MdEdit 
+                                                    className="cursor-pointer" 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditTrade(trade); 
+                                                    }} 
+                                                />
                                     </TableCell>
                                     <TableCell>{trade.symbol}</TableCell>
                                     <TableCell>{trade.type}</TableCell>
@@ -521,200 +642,12 @@ const handleUpdateAccount = async () => {
                         </TableBody>
                     </Table>
                 </div>
-                <div className={styles.tradeEntry}>
-                    <div className={styles.selectGroup}>
-                        <Select size="sm" label="Symbol" className="w-full" aria-label="Select symbol" onChange={(e) => setSelectedSymbol(e.target.value)}>
-                            {symbols.map((symbol) => (
-                            <SelectItem key={symbol.key} value={symbol.key}>
-                                {symbol.label}
-                            </SelectItem>
-                        ))}
-                    </Select>
-                        <Select size="sm" label="Type" className="w-full" aria-label="Select trade type" onChange={(e) => setSelectedTradeType(e.target.value)}>
-                            {tradeTypes.map((tradeType) => (
-                                <SelectItem key={tradeType.key} value={tradeType.key}>
-                                    {tradeType.label}
-                                </SelectItem>
-                            ))}
-                    </Select>
-                    <Input
-                            type="number"
-                            size='sm'
-                            label="# of Shares"
-                            placeholder="0"
-                            labelPlacement="inside"
-                            aria-label="# of Shares"
-                            className="w-full"
-                            value={shares !== null ? shares.toString() : '0'} 
-                            onChange={(e) => setShares(Number(e.target.value))} 
-                    />
-                    </div>
-                    <div className={styles.priceGroup}>
-                        <Input
-                            type="number"
-                            label="Entry Price"
-                            placeholder="0.00"
-                            labelPlacement="inside"
-                            aria-label="Entry price"
-                            size='sm'
-                            value={entryPrice !== null ? entryPrice.toString() : ''} 
-                            onChange={(e) => setEntryPrice(Number(e.target.value))}
-                            endContent={
-                                <div className="pointer-events-none flex items-center">
-                                    <span className="text-default-400 text-small">$</span>
-                                </div>
-                            }
-                        />
-                        <Input
-                            type="number"
-                            label="Exit Price"
-                            placeholder="0.00"
-                            size='sm'
-                            labelPlacement="inside"
-                            aria-label="Exit price"
-                            value={exitPrice !== null ? exitPrice.toString() : ''} 
-                            onChange={(e) => setExitPrice(Number(e.target.value))}
-                            endContent={
-                                <div className="pointer-events-none flex items-center">
-                                    <span className="text-default-400 text-small">$</span>
-                                </div>
-                            }
-                        />
-                    </div>
-                    <div className={styles.priceGroup}>
-                        <Input
-                            type="number"
-                            label="Stop Loss"
-                            placeholder="0.00"
-                            size='sm'
-                            labelPlacement="inside"
-                            aria-label="Stop Loss"
-                            value={stopLoss !== null ? stopLoss.toString() : ''} 
-                            onChange={(e) => setStopLoss(Number(e.target.value))} 
-                            endContent={
-                                <div className="pointer-events-none flex items-center">
-                                    <span className="text-default-400 text-small">$</span>
-                                </div>
-                            }
-                        />
-                        <Input
-                            type="number"
-                            label="Take Profit"
-                            placeholder="0.00"
-                            size='sm'
-                            labelPlacement="inside"
-                            value={takeProfit !== null ? takeProfit.toString() : ''} 
-                            onChange={(e) => setTakeProfit(Number(e.target.value))} 
-                            aria-label="Take Profit"
-                            endContent={
-                                <div className="pointer-events-none flex items-center">
-                                    <span className="text-default-400 text-small">$</span>
-                                </div>
-                            }
-                        />
-                    </div>
-                    <div className={styles.priceGroup}>
-                    <DateRangePicker 
-                        hideTimeZone
-                        size='sm' 
-                        label="Trade duration" 
-                        className="w-full" 
-                        aria-label="Select trade duration"
-                        defaultValue={{
-                            start: parseAbsoluteToLocal(new Date(new Date().setSeconds(0)).toISOString()),
-                            end: parseAbsoluteToLocal(new Date(new Date().setSeconds(0)).toISOString()),
-                        }}
-                        onChange={(value: any) => {
-                            // Convert custom date object to ISO string
-                            const isoStartDate = convertToISO(value?.start);
-                            const isoEndDate = convertToISO(value?.end);
-                        
-                            // Set state - they can now be either string or null
-                            setStartDate(isoStartDate || null); // If it's an empty string, set to null
-                            setEndDate(isoEndDate || null); // Same for end date
-                        
-                        }}
-                    />
-
-
-                    
-                    </div>
-                    <Divider orientation="horizontal" />
-                    <div className={styles.statsGroup}>
-                        <Input
-                            isReadOnly
-                            type="number"
-                            label="Risk"
-                            placeholder="0.00"
-                            value={risk.toFixed(2)} 
-                            size='sm'
-                            labelPlacement="inside"
-                            aria-label="Risk Percent"
-                            endContent={
-                                <div className="pointer-events-none flex items-center">
-                                    <span className="text-default-400 text-small">%</span>
-                                </div>
-                            }
-                        />
-                        <Input
-                            isReadOnly
-                            type="number"
-                            label="Potential Loss"
-                            value={potentialLoss.toFixed(2)} 
-                            labelPlacement="inside"
-                            aria-label="Potential Profit"
-                            variant='flat'
-                            size='sm'
-                            color="danger"
-                            startContent={
-                                <div className="pointer-events-none flex items-center">
-                                    <span className="text-default-400 text-small">$</span>
-                                </div>
-                            }
-                        />
-                        <Input
-                            isReadOnly
-                            type="number"
-                            label="Potential Profit"
-                            value={potentialProfit.toFixed(2)} 
-                            labelPlacement="inside"
-                            aria-label="Potential Profit"
-                            variant='flat'
-                            size='sm'
-                            color="success"
-                            startContent={
-                                <div className="pointer-events-none flex items-center">
-                                    <span className="text-default-400 text-small">$</span>
-                                </div>
-                            }
-                        />
-                        <Input
-                            isReadOnly
-                            type="number"
-                            label="Actual Profit"
-                            value={actualProfit.toFixed(2)} 
-                            labelPlacement="inside"
-                            aria-label="Actual Profit"
-                            size='sm'
-                            variant='flat'
-                            color={actualProfit >= 0 ? 'success' : 'danger'}
-                            startContent={
-                                <div className="pointer-events-none flex items-center">
-                                    <span className="text-default-400 text-small">$</span>
-                                </div>
-                            }
-                        />
-                    </div>
-                    <Button color="secondary" variant="faded" onClick={handleSubmitTrade} aria-label="Submit trade">
-                        Submit Trade
-                    </Button>
-                </div>
             </div>
             <div className={styles.bottomContent}>
                 <StatsChart data={chartData()} />
             </div>
 
-            <Modal isOpen={showModal} onOpenChange={(isOpen) => {
+            <Modal isDismissable={false} placement='center' isOpen={showModal} onOpenChange={(isOpen) => {
                 setShowModal(isOpen);
                 if (!isOpen) {
                     resetModalState(); // Reset state when modal is closed
@@ -754,7 +687,218 @@ const handleUpdateAccount = async () => {
     </ModalContent>
 </Modal>
 
+
+<Modal isDismissable={false} placement='center' className="h-5/6 w-5/6" size="4xl" isOpen={showTradeModal} onOpenChange={(isOpen) => {
+                setShowTradeModal(isOpen);
+                if (!isOpen) {
+                    resetModalState();
+                    setTradeToEdit(null);
+                }
+            }}>
+    <ModalContent>
+        <ModalHeader>{tradeToEdit ? "Edit Trade" : "New Trade"}</ModalHeader>
+            <ScrollShadow className="w-full h-full">
+                <ModalBody>
+                    {/* Trade Entry Form */}
+                    <div className={styles.tradeEntry}>
+                        <div className={styles.selectGroup}>
+                        <Select 
+                            size="sm" 
+                            label="Symbol" 
+                            className="w-full" 
+                            aria-label="Select symbol" 
+                            defaultSelectedKeys={[tradeToEdit?.symbol ? tradeToEdit.symbol.replace(/"/g, '') : selectedSymbol]} // Wrap the value in an array
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setSelectedSymbol(value);
+                                if (tradeToEdit) {
+                                    tradeToEdit.symbol = value; // Update tradeToEdit symbol
+                                }
+                            }}
+                            >
+                            {symbols.map((symbol) => (
+                                <SelectItem key={symbol.key} value={symbol.key}>
+                                    {symbol.label}
+                                </SelectItem>
+                            ))}
+                            </Select>
+
+                            <Select 
+                            size="sm" 
+                            label="Type" 
+                            className="w-full" 
+                            aria-label="Select trade type" 
+                            defaultSelectedKeys={[tradeToEdit?.type ? tradeToEdit.type.replace(/"/g, '') : selectedTradeType]} // Wrap the value in an array
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setSelectedTradeType(value);
+                                if (tradeToEdit) {
+                                    tradeToEdit.type = value; // Update tradeToEdit type
+                                }
+                            }}
+                            >
+                            {tradeTypes.map((tradeType) => (
+                                <SelectItem key={tradeType.key} value={tradeType.key}>
+                                    {tradeType.label}
+                                </SelectItem>
+                            ))}
+                            </Select>
+
+
+
+                            <Input
+                                type="number"
+                                size="sm"
+                                label="# of Shares"
+                                placeholder="0"
+                                aria-label="# of Shares"
+                                className="w-full"
+                                value={tradeToEdit && tradeToEdit.shares !== undefined ? tradeToEdit.shares.toString() : (shares !== null && shares !== undefined ? shares.toString() : '0')}
+                                onChange={(e) => setShares(Number(e.target.value))}
+                            />
+                        </div>
+
+                        <div className={styles.priceGroup}>
+                            <Input
+                                type="number"
+                                label="Entry Price"
+                                placeholder="0.00"
+                                aria-label="Entry price"
+                                size="sm"
+                                value={tradeToEdit && tradeToEdit.entryPrice !== undefined ? tradeToEdit.entryPrice.toString() : (entryPrice !== null && entryPrice !== undefined ? entryPrice.toString() : '')}
+                                onChange={(e) => setEntryPrice(Number(e.target.value))}
+                                endContent={<span className="text-default-400 text-small">$</span>}
+                            />
+                            <Input
+                                type="number"
+                                label="Exit Price"
+                                placeholder="0.00"
+                                aria-label="Exit price"
+                                size="sm"
+                                value={tradeToEdit && tradeToEdit.exitPrice !== undefined ? tradeToEdit.exitPrice.toString() : (exitPrice !== null && exitPrice !== undefined ? exitPrice.toString() : '')}
+                                onChange={(e) => setExitPrice(Number(e.target.value))}
+                                endContent={<span className="text-default-400 text-small">$</span>}
+                            />
+                        </div>
+
+                        <div className={styles.priceGroup}>
+                            <Input
+                                type="number"
+                                label="Stop Loss"
+                                placeholder="0.00"
+                                size="sm"
+                                aria-label="Stop Loss"
+                                value={tradeToEdit && tradeToEdit.stopLoss !== undefined ? tradeToEdit.stopLoss.toString() : (stopLoss !== null && stopLoss !== undefined ? stopLoss.toString() : '')}
+                                onChange={(e) => setStopLoss(Number(e.target.value))}
+                                endContent={<span className="text-default-400 text-small">$</span>}
+                            />
+                            <Input
+                                type="number"
+                                label="Take Profit"
+                                placeholder="0.00"
+                                size="sm"
+                                aria-label="Take Profit"
+                                value={tradeToEdit && tradeToEdit.takeProfit !== undefined ? tradeToEdit.takeProfit.toString() : (takeProfit !== null && takeProfit !== undefined ? takeProfit.toString() : '')}
+                                onChange={(e) => setTakeProfit(Number(e.target.value))}
+                                endContent={<span className="text-default-400 text-small">$</span>}
+                            />
+                        </div>
+
+                        <div className={styles.priceGroup}>
+                        <DateRangePicker
+                            hideTimeZone
+                            size="sm"
+                            label="Trade duration"
+                            className="w-full"
+                            aria-label="Select trade duration"
+                            defaultValue={tradeToEdit && tradeToEdit.startDate && tradeToEdit.endDate ? {
+                                start: parseAbsoluteToLocal(new Date(tradeToEdit.startDate).toISOString()),
+                                end: parseAbsoluteToLocal(new Date(tradeToEdit.endDate).toISOString()),
+                            } : {
+                                start: parseAbsoluteToLocal(new Date(new Date().setSeconds(0)).toISOString()),
+                                end: parseAbsoluteToLocal(new Date(new Date().setSeconds(0)).toISOString()),
+                            }}
+                            onChange={(value) => {
+                                const isoStartDate = convertToISO(value?.start);
+                                const isoEndDate = convertToISO(value?.end);
+                                setStartDate(isoStartDate || null);
+                                setEndDate(isoEndDate || null);
+                            }}
+                        />
+
+                        </div>
+
+                        <Divider orientation="horizontal" />
+
+                        <div className={styles.statsGroup}>
+                            <Input
+                                isReadOnly
+                                type="number"
+                                label="Risk"
+                                placeholder="0.00"
+                                value={risk.toFixed(2)}
+                                size="sm"
+                                aria-label="Risk Percent"
+                                endContent={<span className="text-default-400 text-small">%</span>}
+                            />
+                            <Input
+                                isReadOnly
+                                type="number"
+                                label="Potential Loss"
+                                value={potentialLoss.toFixed(2)}
+                                aria-label="Potential Profit"
+                                size="sm"
+                                variant="flat"
+                                color="danger"
+                                startContent={<span className="text-default-400 text-small">$</span>}
+                            />
+                            <Input
+                                isReadOnly
+                                type="number"
+                                label="Potential Profit"
+                                value={potentialProfit.toFixed(2)}
+                                aria-label="Potential Profit"
+                                size="sm"
+                                variant="flat"
+                                color="success"
+                                startContent={<span className="text-default-400 text-small">$</span>}
+                            />
+                            <Input
+                                isReadOnly
+                                type="number"
+                                label="Actual Profit"
+                                value={actualProfit.toFixed(2)}
+                                aria-label="Actual Profit"
+                                size="sm"
+                                variant="flat"
+                                color={actualProfit >= 0 ? 'success' : 'danger'}
+                                startContent={<span className="text-default-400 text-small">$</span>}
+                            />
+
+                        </div>
+                        <Divider orientation="horizontal" />
+                        <div className='w-full min-h-max'>
+                            <App initialContent={"Start Typing..."}/>
+                        </div>
+                    </div>
+                </ModalBody>
+            </ScrollShadow>
+        <ModalFooter>
+            {tradeToEdit && (
+                <Button color="default" onClick={() => handleDeleteTrade(tradeToEdit.id)}>
+                    Delete Trade
+                </Button>
+            )}
+            <Button color="secondary" onClick={tradeToEdit ? handleUpdateTrade : handleSubmitTrade}>
+                {tradeToEdit ? "Update Trade" : "Create Trade"}
+            </Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+
         </div>
     );
 };
+
 export default Trades;

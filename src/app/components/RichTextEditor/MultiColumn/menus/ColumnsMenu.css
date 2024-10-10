@@ -1,0 +1,24 @@
+[data-type="columns"] {
+    display: flex; /* Use flexbox for layout */
+    gap: 1rem;    /* Space between columns */
+  }
+  
+  [data-type="column"] {
+    flex: 1; /* Allow columns to grow equally */
+    padding: 1rem; /* Optional padding inside each column */
+    border: 1px solid #e2e8f0; /* Optional border for visual separation */
+  }
+  
+  /* Optional: Different styles based on layout */
+  .layout-sidebar-left {
+    flex-direction: row;
+  }
+  
+  .layout-sidebar-right {
+    flex-direction: row-reverse;
+  }
+  
+  .layout-two-column {
+    flex-direction: row;
+  }
+  

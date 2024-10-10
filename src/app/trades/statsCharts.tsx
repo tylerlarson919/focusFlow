@@ -111,7 +111,6 @@ const StatsChart: NextPage<{ data: { trades: TradeData[], accountBalance: number
       return acc;
     }, []);
   
-    console.log("cumulative balance data: ", cumulativeData);
     setCumulativeBalanceData(cumulativeData);
   
     // Set trade profit/loss data

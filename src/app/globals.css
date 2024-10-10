@@ -100,3 +100,14 @@ html, body, #root {
   height: 100%;
   margin: 0;
 }
+
+
+ul {
+  list-style-type: disc; /* Ensures bullets are displayed */
+  padding-left: 20px;    /* Adds indentation to the list */
+}
+
+ol {
+  list-style-type: decimal; /* Ensures numbers are displayed for ordered lists */
+  padding-left: 20px;      /* Adds indentation to the ordered list */
+}
